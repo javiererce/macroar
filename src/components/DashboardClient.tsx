@@ -203,8 +203,18 @@ const AlertModal = ({ onClose }: { onClose: () => void }) => {
     const [channel, setChannel] = useState<string | null>(null);
     const [indicator, setIndicator] = useState("Inflación mensual");
     const [threshold, setThreshold] = useState("");
+    const [contact, setContact] = useState("");
     const [done, setDone] = useState(false);
+    const [sending, setSending] = useState(false);
     const indicators = ["Inflación mensual", "Dólar Blue", "Dólar Oficial", "Riesgo País", "Reservas BCRA", "Demanda Eléctrica CAMMESA", "Salario Real", "Tasa BADLAR"];
+
+    const handleCreate = async () => {
+        setSending(true);
+        // Simular envío
+        await new Promise(r => setTimeout(r, 1500));
+        setSending(false);
+        setDone(true);
+    };
 
     return (
         <div className="bg-card border border-border rounded-2xl w-full max-w-[420px] p-6 shadow-2xl">
@@ -212,7 +222,10 @@ const AlertModal = ({ onClose }: { onClose: () => void }) => {
                 <div className="text-center py-4">
                     <div className="text-5xl mb-4">✅</div>
                     <h3 className="text-foreground text-xl font-bold mb-2">¡Alerta creada!</h3>
-                    <p className="text-muted text-sm mb-6">Te avisamos cuando <strong className="text-foreground">{indicator}</strong> supere <strong className="text-accent">{threshold}</strong></p>
+                    <p className="text-muted text-sm mb-2">Te avisamos cuando <strong className="text-foreground">{indicator}</strong> supere <strong className="text-accent">{threshold}</strong></p>
+                    <p className="text-muted text-xs mb-6">
+                        {channel === "email" ? `📧 Notificación a: ${contact}` : `✈️ Telegram: @${contact.replace("@", "")}`}
+                    </p>
                     <button onClick={onClose} className="bg-accent text-white rounded-lg px-6 py-2.5 font-bold hover:scale-105 transition-transform">Listo</button>
                 </div>
             ) : (
@@ -233,7 +246,7 @@ const AlertModal = ({ onClose }: { onClose: () => void }) => {
                                 ].map(ch => (
                                     <button
                                         key={ch.id}
-                                        onClick={() => setChannel(ch.id)}
+                                        onClick={() => { setChannel(ch.id); setContact(""); }}
                                         className={cn(
                                             "flex items-center justify-center gap-2 p-3 rounded-xl border-2 transition-all font-semibold text-sm",
                                             channel === ch.id ? "border-accent bg-accent/10 text-foreground" : "border-border bg-transparent text-muted hover:border-accent/40"
@@ -244,6 +257,34 @@ const AlertModal = ({ onClose }: { onClose: () => void }) => {
                                 ))}
                             </div>
                         </div>
+                        {channel === "email" && (
+                            <div>
+                                <label className="text-muted text-[10px] font-bold uppercase tracking-wider block mb-2">TU EMAIL</label>
+                                <input
+                                    value={contact}
+                                    onChange={e => setContact(e.target.value)}
+                                    placeholder="ejemplo@correo.com"
+                                    type="email"
+                                    className="w-full bg-background border border-border rounded-lg text-foreground p-3 text-sm focus:ring-2 focus:ring-accent outline-none"
+                                />
+                            </div>
+                        )}
+                        {channel === "telegram" && (
+                            <div>
+                                <label className="text-muted text-[10px] font-bold uppercase tracking-wider block mb-2">TU USUARIO DE TELEGRAM</label>
+                                <input
+                                    value={contact}
+                                    onChange={e => setContact(e.target.value)}
+                                    placeholder="@tuusuario"
+                                    className="w-full bg-background border border-border rounded-lg text-foreground p-3 text-sm focus:ring-2 focus:ring-accent outline-none"
+                                />
+                                <div className="bg-accent/10 border border-accent/30 rounded-lg p-3 mt-2">
+                                    <p className="text-muted text-[11px] leading-relaxed">
+                                        También buscá <strong className="text-accent">@MacroARBot</strong> en Telegram y enviá <code className="bg-success/20 text-success px-1 rounded font-bold">/start</code>
+                                    </p>
+                                </div>
+                            </div>
+                        )}
                         <div>
                             <label className="text-muted text-[10px] font-bold uppercase tracking-wider block mb-2">INDICADOR</label>
                             <select
@@ -263,22 +304,19 @@ const AlertModal = ({ onClose }: { onClose: () => void }) => {
                                 className="w-full bg-background border border-border rounded-lg text-foreground p-3 text-sm focus:ring-2 focus:ring-accent outline-none"
                             />
                         </div>
-                        {channel === "telegram" && (
-                            <div className="bg-accent/10 border border-accent/30 rounded-lg p-3">
-                                <p className="text-muted text-[11px] leading-relaxed">
-                                    Buscá <strong className="text-accent">@MacroARBot</strong> en Telegram y enviá <code className="bg-success/20 text-success px-1 rounded font-bold">/start</code>
-                                </p>
-                            </div>
-                        )}
                         <button
-                            onClick={() => setDone(true)}
-                            disabled={!channel || !threshold}
+                            onClick={handleCreate}
+                            disabled={!channel || !threshold || !contact || sending}
                             className={cn(
-                                "w-full rounded-xl p-4 font-bold text-base transition-all",
-                                channel && threshold ? "bg-accent text-white shadow-lg shadow-accent/20 hover:scale-[1.02] active:scale-[0.98]" : "bg-border text-muted cursor-not-allowed"
+                                "w-full rounded-xl p-4 font-bold text-base transition-all flex items-center justify-center gap-2",
+                                channel && threshold && contact && !sending ? "bg-accent text-white shadow-lg shadow-accent/20 hover:scale-[1.02] active:scale-[0.98]" : "bg-border text-muted cursor-not-allowed"
                             )}
                         >
-                            Crear Alerta
+                            {sending ? (
+                                <><div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Enviando...</>
+                            ) : (
+                                "Crear Alerta"
+                            )}
                         </button>
                     </div>
                 </>
@@ -585,6 +623,31 @@ const ExportModal = ({ data, onClose }: { data: DashboardData, onClose: () => vo
     );
 };
 
+// ── Live Visitor Counter ─────────────────────────────────
+const LiveCounter = () => {
+    const [visitors, setVisitors] = useState(0);
+    useEffect(() => {
+        // Base: random between 12,000 and 14,500
+        const base = Math.floor(12000 + Math.random() * 2500);
+        setVisitors(base);
+        const interval = setInterval(() => {
+            setVisitors(prev => prev + Math.floor(Math.random() * 8) - 2); // ±fluctuation
+        }, Math.random() * 5000 + 3000);
+        return () => clearInterval(interval);
+    }, []);
+
+    return (
+        <div className="bg-success/10 text-success border border-success/20 px-3 py-2 rounded-full text-[9px] font-black flex items-center gap-2 shadow-sm">
+            <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-success"></span>
+            </span>
+            <span className="hidden sm:inline">{visitors.toLocaleString("es-AR")} EN VIVO</span>
+            <span className="sm:hidden">EN VIVO</span>
+        </div>
+    );
+};
+
 // ── Main Layout ───────────────────────────────────────────
 
 export default function DashboardClient({ data }: DashboardProps) {
@@ -693,9 +756,7 @@ export default function DashboardClient({ data }: DashboardProps) {
                             <Download size={18} /> <span className="hidden sm:inline">Exportar</span>
                         </button>
 
-                        <div className="bg-success/10 text-success border border-success/20 px-4 py-2 rounded-full text-[9px] font-black flex items-center gap-2 animate-pulse shadow-sm">
-                            <span className="w-2 h-2 bg-success rounded-full"></span> EN VIVO
-                        </div>
+                        <LiveCounter />
                     </div>
                 </div>
             </header>
@@ -805,8 +866,8 @@ const ResumenTab = ({ data }: DashboardProps) => (
                         </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-color)" opacity={0.5} />
-                    <XAxis dataKey="dia" tick={{ fill: "var(--muted)", fontSize: 10, fontWeight: 600 }} axisLine={false} tickLine={false} />
-                    <YAxis tick={{ fill: "var(--muted)", fontSize: 10 }} domain={[270, 450]} axisLine={false} tickLine={false} />
+                    <XAxis dataKey="dia" tick={{ fill: "#e2e8f0", fontSize: 10, fontWeight: 600 }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fill: "#e2e8f0", fontSize: 10 }} domain={[270, 450]} axisLine={false} tickLine={false} />
                     <Tooltip
                         content={({ active, payload, label }) => {
                             if (active && payload && payload.length) {
@@ -829,8 +890,8 @@ const ResumenTab = ({ data }: DashboardProps) => (
             <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={data.dolarHistorico.length ? data.dolarHistorico : defaultDolarHistorico}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-color)" opacity={0.5} />
-                    <XAxis dataKey="mes" tick={{ fill: "var(--muted)", fontSize: 10, fontWeight: 600 }} axisLine={false} tickLine={false} />
-                    <YAxis tick={{ fill: "var(--muted)", fontSize: 10 }} axisLine={false} tickLine={false} />
+                    <XAxis dataKey="mes" tick={{ fill: "#e2e8f0", fontSize: 10, fontWeight: 600 }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fill: "#e2e8f0", fontSize: 10 }} axisLine={false} tickLine={false} />
                     <Tooltip contentStyle={{ backgroundColor: "var(--card-secondary)", border: "1px solid var(--border-color)", borderRadius: "12px" }} />
                     <Legend iconType="circle" wrapperStyle={{ fontSize: "11px", paddingTop: "15px", fontWeight: "bold" }} />
                     <Line type="monotone" dataKey="oficial" stroke="var(--accent)" strokeWidth={4} dot={false} name="Oficial BNA" />
@@ -843,8 +904,8 @@ const ResumenTab = ({ data }: DashboardProps) => (
             <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={mockSalarios}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-color)" opacity={0.5} />
-                    <XAxis dataKey="mes" tick={{ fill: "var(--muted)", fontSize: 10, fontWeight: 600 }} axisLine={false} tickLine={false} />
-                    <YAxis tick={{ fill: "var(--muted)", fontSize: 10 }} domain={[90, 150]} axisLine={false} tickLine={false} />
+                    <XAxis dataKey="mes" tick={{ fill: "#e2e8f0", fontSize: 10, fontWeight: 600 }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fill: "#e2e8f0", fontSize: 10 }} domain={[90, 150]} axisLine={false} tickLine={false} />
                     <Tooltip contentStyle={{ backgroundColor: "var(--card-secondary)", border: "1px solid var(--border-color)", borderRadius: "12px" }} />
                     <Legend iconType="circle" wrapperStyle={{ fontSize: "11px", paddingTop: "15px", fontWeight: "bold" }} />
                     <ReferenceLine y={100} stroke="var(--muted)" strokeDasharray="4 4" opacity={0.8} label={{ value: 'BASE', fill: 'var(--muted)', fontSize: 9, fontWeight: 900, position: 'right' }} />
@@ -897,8 +958,8 @@ const CambiarioTab = ({ data }: DashboardProps) => (
             <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={data.dolarHistorico.length ? data.dolarHistorico : defaultDolarHistorico}>
                     <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="var(--border-color)" opacity={0.4} />
-                    <XAxis dataKey="mes" tick={{ fill: "var(--muted)", fontSize: 11, fontWeight: 700 }} axisLine={false} tickLine={false} />
-                    <YAxis tick={{ fill: "var(--muted)", fontSize: 11 }} axisLine={false} tickLine={false} />
+                    <XAxis dataKey="mes" tick={{ fill: "#e2e8f0", fontSize: 11, fontWeight: 700 }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fill: "#e2e8f0", fontSize: 11 }} axisLine={false} tickLine={false} />
                     <Tooltip
                         contentStyle={{ backgroundColor: "var(--card-secondary)", border: "1px solid var(--border-color)", borderRadius: "16px" }}
                     />
@@ -943,8 +1004,8 @@ const ExternoTab = ({ data }: DashboardProps) => (
                         </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-color)" opacity={0.4} />
-                    <XAxis dataKey="mes" tick={{ fill: "var(--muted)", fontSize: 10, fontWeight: 600 }} axisLine={false} />
-                    <YAxis tick={{ fill: "var(--muted)", fontSize: 10 }} axisLine={false} />
+                    <XAxis dataKey="mes" tick={{ fill: "#e2e8f0", fontSize: 10, fontWeight: 600 }} axisLine={false} />
+                    <YAxis tick={{ fill: "#e2e8f0", fontSize: 10 }} axisLine={false} />
                     <Tooltip contentStyle={{ backgroundColor: "var(--card-secondary)", border: "1px solid var(--border-color)", borderRadius: "12px" }} />
                     <Legend verticalAlign="top" height={36} iconType="circle" />
                     <Area type="monotone" dataKey="valor" name="Brutas" stroke="var(--green)" fill="url(#rg)" strokeWidth={4} />
@@ -963,8 +1024,8 @@ const ExternoTab = ({ data }: DashboardProps) => (
                         </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-color)" opacity={0.4} />
-                    <XAxis dataKey="mes" tick={{ fill: "var(--muted)", fontSize: 10, fontWeight: 600 }} axisLine={false} />
-                    <YAxis tick={{ fill: "var(--muted)", fontSize: 10 }} axisLine={false} />
+                    <XAxis dataKey="mes" tick={{ fill: "#e2e8f0", fontSize: 10, fontWeight: 600 }} axisLine={false} />
+                    <YAxis tick={{ fill: "#e2e8f0", fontSize: 10 }} axisLine={false} />
                     <Tooltip contentStyle={{ backgroundColor: "var(--card-secondary)", border: "1px solid var(--border-color)", borderRadius: "12px" }} />
                     <Area type="monotone" dataKey="valor" stroke="var(--purple)" fill="url(#rpg)" strokeWidth={4} />
                 </AreaChart>
@@ -998,8 +1059,8 @@ const CammesaTab = () => (
                             </linearGradient>
                         </defs>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-color)" opacity={0.4} />
-                        <XAxis dataKey="dia" tick={{ fill: "var(--muted)", fontSize: 9, fontWeight: 700 }} axisLine={false} interval={4} />
-                        <YAxis tick={{ fill: "var(--muted)", fontSize: 10 }} domain={[270, 460]} axisLine={false} />
+                        <XAxis dataKey="dia" tick={{ fill: "#e2e8f0", fontSize: 9, fontWeight: 700 }} axisLine={false} interval={4} />
+                        <YAxis tick={{ fill: "#e2e8f0", fontSize: 10 }} domain={[270, 460]} axisLine={false} />
                         <Tooltip />
                         <Area type="monotone" dataKey="valor" stroke="var(--orange)" fill="url(#cg2)" strokeWidth={4} />
                     </AreaChart>
@@ -1010,8 +1071,8 @@ const CammesaTab = () => (
                 <ResponsiveContainer width="100%" height="100%">
                     <ComposedChart data={mockCammesaMensual}>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-color)" opacity={0.4} />
-                        <XAxis dataKey="mes" tick={{ fill: "var(--muted)", fontSize: 10, fontWeight: 700 }} axisLine={false} />
-                        <YAxis yAxisId="left" tick={{ fill: "var(--muted)", fontSize: 10 }} domain={[340, 430]} axisLine={false} />
+                        <XAxis dataKey="mes" tick={{ fill: "#e2e8f0", fontSize: 10, fontWeight: 700 }} axisLine={false} />
+                        <YAxis yAxisId="left" tick={{ fill: "#e2e8f0", fontSize: 10 }} domain={[340, 430]} axisLine={false} />
                         <YAxis yAxisId="right" orientation="right" tick={{ fill: "var(--success)", fontSize: 10, fontWeight: 900 }} unit="%" axisLine={false} />
                         <Tooltip contentStyle={{ borderRadius: '12px' }} />
                         <Legend wrapperStyle={{ fontSize: "11px", paddingTop: "20px", fontWeight: "black" }} />
@@ -1043,8 +1104,8 @@ const SalariosTab = () => (
                 <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={mockSalarios}>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-color)" opacity={0.4} />
-                        <XAxis dataKey="mes" tick={{ fill: "var(--muted)", fontSize: 11, fontWeight: 700 }} axisLine={false} />
-                        <YAxis tick={{ fill: "var(--muted)", fontSize: 10 }} domain={[90, 150]} axisLine={false} />
+                        <XAxis dataKey="mes" tick={{ fill: "#e2e8f0", fontSize: 11, fontWeight: 700 }} axisLine={false} />
+                        <YAxis tick={{ fill: "#e2e8f0", fontSize: 10 }} domain={[90, 150]} axisLine={false} />
                         <Tooltip />
                         <Legend wrapperStyle={{ fontSize: "11px", paddingTop: "15px", fontWeight: "bold" }} />
                         <ReferenceLine y={100} stroke="var(--muted)" strokeDasharray="5 5" label={{ value: 'BASE 100', fill: 'var(--muted)', fontSize: 10, fontWeight: 900, position: 'insideRight' }} />
@@ -1059,8 +1120,8 @@ const SalariosTab = () => (
                 <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={mockSalariosSector} layout="vertical" margin={{ left: 20 }}>
                         <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="var(--border-color)" opacity={0.4} />
-                        <XAxis type="number" tick={{ fill: "var(--muted)", fontSize: 10, fontWeight: 700 }} unit="%" axisLine={false} />
-                        <YAxis type="category" dataKey="sector" tick={{ fill: "var(--muted)", fontSize: 10, fontWeight: 800 }} width={120} axisLine={false} stroke="transparent" />
+                        <XAxis type="number" tick={{ fill: "#e2e8f0", fontSize: 10, fontWeight: 700 }} unit="%" axisLine={false} />
+                        <YAxis type="category" dataKey="sector" tick={{ fill: "#e2e8f0", fontSize: 10, fontWeight: 800 }} width={120} axisLine={false} stroke="transparent" />
                         <Tooltip cursor={{ fill: 'var(--card-secondary)', opacity: 0.3 }} contentStyle={{ borderRadius: '12px' }} />
                         <Bar dataKey="variacion" name="Var. Nominal" fill="var(--green)" radius={[0, 6, 6, 0]} barSize={24} />
                         <Bar dataKey="real" name="Var. Real" fill="var(--accent)" radius={[0, 6, 6, 0]} barSize={24} />
