@@ -7,8 +7,9 @@ import { getInflacion, getReservas, getRiesgoPais, getDolares, getDolarHistorico
 import DashboardClient from "@/components/DashboardClient";
 import { Loader2 } from "lucide-react";
 
-// Revalidar la página completa cada 30 minutos
-export const revalidate = 1800;
+// Render dynamically on each request (no pre-rendering during build)
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export const metadata = {
   title: "MacroAR — Dashboard Económico Argentina",

@@ -416,6 +416,14 @@ export default function DashboardClient({ data }: DashboardProps) {
         return () => clearTimeout(timer);
     }, []);
 
+    // Safety timeout: never stay in loading state forever
+    useEffect(() => {
+        const safetyTimeout = setTimeout(() => {
+            if (loading) setLoading(false);
+        }, 8000);
+        return () => clearTimeout(safetyTimeout);
+    }, [loading]);
+
     useEffect(() => {
         if (dark) {
             document.documentElement.classList.add("dark");
