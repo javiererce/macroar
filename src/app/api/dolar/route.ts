@@ -1,47 +1,30 @@
 import { NextResponse } from "next/server";
 
-export const revalidate = 1800; // 30 min
-
-const ARGDATA = "https://api.argentinadatos.com/v1";
-
-async function fetchLastDolar(tipo: string): Promise<{ compra: number; venta: number; fecha: string } | null> {
-    try {
-        const res = await fetch(`${ARGDATA}/cotizaciones/dolares/${tipo}`, {
-            next: { revalidate: 1800 },
-            headers: { "Accept": "application/json" },
-        });
-        if (!res.ok) return null;
-        const json = await res.json() as { compra: number; venta: number; fecha: string }[];
-        if (!Array.isArray(json) || json.length === 0) return null;
-        return json[json.length - 1];
-    } catch {
-        return null;
-    }
-}
-
 export async function GET() {
     try {
-        const [oficial, blue, bolsa, ccl] = await Promise.all([
-            fetchLastDolar("oficial"),
-            fetchLastDolar("blue"),
-            fetchLastDolar("bolsa"),
-            fetchLastDolar("contadoconliqui"),
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 5000);
+
+        const [oficial, blue, mep, ccl] = await Promise.all([
+            fetch("https://api.argentinadatos.com/v1/cotizaciones/dolares/oficial", { signal: controller.signal }).then(r => r.json()).catch(() => []),
+            fetch("https://api.argentinadatos.com/v1/cotizaciones/dolares/blue", { signal: controller.signal }).then(r => r.json()).catch(() => []),
+            fetch("https://api.argentinadatos.com/v1/cotizaciones/dolares/bolsa", { signal: controller.signal }).then(r => r.json()).catch(() => []),
+            fetch("https://api.argentinadatos.com/v1/cotizaciones/dolares/contadoconliqui", { signal: controller.signal }).then(r => r.json()).catch(() => []),
         ]);
+        clearTimeout(timeout);
 
         return NextResponse.json({
-            oficial: oficial?.venta ?? 1395,
-            blue: blue?.venta ?? 1430,
-            mep: bolsa?.venta ?? 1380,
-            ccl: ccl?.venta ?? 1390,
-            fecha: oficial?.fecha ?? new Date().toISOString().split("T")[0],
-        }, {
-            headers: { "Cache-Control": "s-maxage=1800, stale-while-revalidate=3600" },
+            oficial: oficial.length ? oficial[oficial.length - 1] : null,
+            blue: blue.length ? blue[blue.length - 1] : null,
+            mep: mep.length ? mep[mep.length - 1] : null,
+            ccl: ccl.length ? ccl[ccl.length - 1] : null,
         });
-    } catch (e) {
-        console.error("[/api/dolar] Error:", e);
-        return NextResponse.json(
-            { oficial: 1395, blue: 1430, mep: 1380, ccl: 1390 },
-            { status: 200 }
-        );
+    } catch {
+        return NextResponse.json({
+            oficial: { venta: 1395 },
+            blue: { venta: 1430 },
+            mep: { venta: 1390 },
+            ccl: { venta: 1400 },
+        });
     }
 }

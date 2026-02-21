@@ -1,23 +1,30 @@
 // lib/api.ts
 // MacroAR — Conexiones a APIs públicas argentinas
-// Fuente principal: argentinadatos.com (no requiere API key)
+// Todas las llamadas tienen AbortController con 5s timeout
+// Fuente principal: argentinadatos.com
 // Fuente secundaria: datos.gob.ar (INDEC)
 
 const ARGDATA = "https://api.argentinadatos.com/v1";
 
+function withTimeout(ms = 5000): { signal: AbortSignal; clear: () => void } {
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), ms);
+    return { signal: controller.signal, clear: () => clearTimeout(id) };
+}
+
 // ── Inflación mensual (argentinadatos.com) ─────────────────
-// Devuelve directamente variación % mensual (no el índice)
 export async function getInflacion() {
+    const t = withTimeout();
     try {
         const res = await fetch(`${ARGDATA}/finanzas/indices/inflacion`, {
             next: { revalidate: 86400 },
-            headers: { "Accept": "application/json" },
+            signal: t.signal,
         });
+        t.clear();
         if (!res.ok) throw new Error(`Inflacion API error: ${res.status}`);
         const json = await res.json() as { fecha: string; valor: number }[];
         if (!Array.isArray(json) || json.length === 0) return FALLBACK.inflacion;
 
-        // Últimos 13 meses
         const recent = json.slice(-13);
         return recent.map(d => ({
             fecha: d.fecha,
@@ -25,24 +32,27 @@ export async function getInflacion() {
             mes: new Date(d.fecha).toLocaleDateString("es-AR", { month: "short", year: "2-digit" }),
         }));
     } catch (e) {
+        t.clear();
         console.error("[getInflacion] Error:", e);
         return FALLBACK.inflacion;
     }
 }
 
 // ── Dólar (argentinadatos.com) ──────────────────────────────
-// Cada endpoint devuelve historial completo, último = más reciente
 async function fetchLastDolar(tipo: string): Promise<number | null> {
+    const t = withTimeout();
     try {
         const res = await fetch(`${ARGDATA}/cotizaciones/dolares/${tipo}`, {
             next: { revalidate: 1800 },
-            headers: { "Accept": "application/json" },
+            signal: t.signal,
         });
+        t.clear();
         if (!res.ok) return null;
         const json = await res.json() as { venta: number; fecha: string }[];
         if (!Array.isArray(json) || json.length === 0) return null;
         return json[json.length - 1]?.venta ?? null;
     } catch {
+        t.clear();
         return null;
     }
 }
@@ -56,147 +66,103 @@ export async function getDolares() {
             fetchLastDolar("contadoconliqui"),
         ]);
         return {
-            oficial: oficial ?? FALLBACK_DOLARES.oficial,
-            blue: blue ?? FALLBACK_DOLARES.blue,
-            mep: mep ?? FALLBACK_DOLARES.mep,
-            ccl: ccl ?? FALLBACK_DOLARES.ccl,
+            oficial: oficial ?? 1395,
+            blue: blue ?? 1430,
+            mep: mep ?? 1390,
+            ccl: ccl ?? 1400,
         };
     } catch (e) {
         console.error("[getDolares] Error:", e);
-        return FALLBACK_DOLARES;
+        return { oficial: 1395, blue: 1430, mep: 1390, ccl: 1400 };
     }
 }
 
-const FALLBACK_DOLARES = { oficial: 1395, blue: 1430, mep: 1380, ccl: 1390 };
-
-// ── Dólar Histórico (Oficial + Blue) ────────────────────────
-export async function getDolarHistorico() {
-    try {
-        const [oficialRes, blueRes] = await Promise.all([
-            fetch(`${ARGDATA}/cotizaciones/dolares/oficial`, {
-                next: { revalidate: 3600 },
-                headers: { "Accept": "application/json" },
-            }).then(r => r.json()).catch(() => []),
-            fetch(`${ARGDATA}/cotizaciones/dolares/blue`, {
-                next: { revalidate: 3600 },
-                headers: { "Accept": "application/json" },
-            }).then(r => r.json()).catch(() => []),
-        ]);
-
-        // Agrupar por mes (último valor del mes)
-        const oficialMap: Record<string, number> = {};
-        const blueMap: Record<string, number> = {};
-
-        (oficialRes as { venta: number; fecha: string }[]).forEach(d => {
-            if (d.fecha && d.venta) {
-                const key = d.fecha.slice(0, 7);
-                oficialMap[key] = Math.round(d.venta);
-            }
-        });
-        (blueRes as { venta: number; fecha: string }[]).forEach(d => {
-            if (d.fecha && d.venta) {
-                const key = d.fecha.slice(0, 7);
-                blueMap[key] = Math.round(d.venta);
-            }
-        });
-
-        // Combinar últimos 13 meses
-        const months = Object.keys(oficialMap).sort().slice(-13);
-        const combined = months
-            .map(key => ({
-                mes: new Date(key + "-15").toLocaleDateString("es-AR", { month: "short", year: "2-digit" }),
-                oficial: oficialMap[key],
-                blue: blueMap[key] ?? null,
-            }))
-            .filter(d => d.blue !== null);
-
-        return combined.length > 0 ? combined : FALLBACK.dolar;
-    } catch (e) {
-        console.error("[getDolarHistorico] Error:", e);
-        return FALLBACK.dolar;
-    }
-}
-
-// ── Tipo de Cambio Oficial (para uso interno) ───────────────
-export async function getTipoCambio() {
-    try {
-        const res = await fetch(`${ARGDATA}/cotizaciones/dolares/oficial`, {
-            next: { revalidate: 3600 },
-            headers: { "Accept": "application/json" },
-        });
-        if (!res.ok) throw new Error(`Oficial API error: ${res.status}`);
-        const json = await res.json() as { venta: number; fecha: string }[];
-        const byMonth: Record<string, { mes: string; oficial: number }> = {};
-        json.forEach(d => {
-            if (d.fecha && d.venta) {
-                const key = d.fecha.slice(0, 7);
-                byMonth[key] = {
-                    mes: new Date(d.fecha).toLocaleDateString("es-AR", { month: "short", year: "2-digit" }),
-                    oficial: Math.round(d.venta),
-                };
-            }
-        });
-        const result = Object.values(byMonth).slice(-13);
-        return result.length > 0 ? result : FALLBACK.dolar.map(d => ({ mes: d.mes, oficial: d.oficial }));
-    } catch (e) {
-        console.error("[getTipoCambio] Error:", e);
-        return FALLBACK.dolar.map(d => ({ mes: d.mes, oficial: d.oficial }));
-    }
-}
-
-// ── Riesgo País (argentinadatos.com) ───────────────────────
+// ── Riesgo País (argentinadatos.com) ────────────────────────
 export async function getRiesgoPais() {
+    const t = withTimeout();
     try {
         const res = await fetch(`${ARGDATA}/finanzas/indices/riesgo-pais`, {
             next: { revalidate: 1800 },
-            headers: { "Accept": "application/json" },
+            signal: t.signal,
         });
-        if (!res.ok) throw new Error(`Riesgo pais API error: ${res.status}`);
+        t.clear();
+        if (!res.ok) throw new Error(`Riesgo API error: ${res.status}`);
         const json = await res.json() as { fecha: string; valor: number }[];
         if (!Array.isArray(json) || json.length === 0) {
             return { actual: 524, historico: FALLBACK.riesgoPais };
         }
-        const last = json[json.length - 1];
-        const byMonth: Record<string, { mes: string; valor: number }> = {};
-        json.forEach(d => {
-            const key = d.fecha.slice(0, 7);
-            byMonth[key] = {
-                mes: new Date(d.fecha).toLocaleDateString("es-AR", { month: "short", year: "2-digit" }),
-                valor: Math.round(d.valor),
-            };
-        });
-        return {
-            actual: last?.valor ?? 524,
-            historico: Object.values(byMonth).slice(-13),
-        };
+
+        const actual = json[json.length - 1]?.valor ?? 524;
+        const historico = json.slice(-13).map(d => ({
+            mes: new Date(d.fecha).toLocaleDateString("es-AR", { month: "short", year: "2-digit" }),
+            valor: d.valor,
+        }));
+        return { actual, historico };
     } catch (e) {
+        t.clear();
         console.error("[getRiesgoPais] Error:", e);
         return { actual: 524, historico: FALLBACK.riesgoPais };
     }
 }
 
-// ── Reservas BCRA (via argentinadatos.com) ──────────────────
-// BCRA API v2 fue deprecada. Usamos datos.gob.ar como alternativa
-export async function getReservas() {
+// ── Dólar Histórico ─────────────────────────────────────────
+export async function getDolarHistorico() {
+    const t = withTimeout(8000);
     try {
-        // Serie de reservas internacionales BCRA desde datos.gob.ar
+        const [ofRes, blRes] = await Promise.all([
+            fetch(`${ARGDATA}/cotizaciones/dolares/oficial`, { next: { revalidate: 86400 }, signal: t.signal }).catch(() => null),
+            fetch(`${ARGDATA}/cotizaciones/dolares/blue`, { next: { revalidate: 86400 }, signal: t.signal }).catch(() => null),
+        ]);
+        t.clear();
+
+        const oficial = ofRes?.ok ? await ofRes.json() as { fecha: string; venta: number }[] : [];
+        const blue = blRes?.ok ? await blRes.json() as { fecha: string; venta: number }[] : [];
+
+        if (oficial.length === 0 && blue.length === 0) return FALLBACK.dolar;
+
+        const byMonth: Record<string, { mes: string; oficial: number; blue: number }> = {};
+        const process = (arr: { fecha: string; venta: number }[], key: "oficial" | "blue") => {
+            arr.forEach(d => {
+                const month = d.fecha.substring(0, 7);
+                if (!byMonth[month]) {
+                    byMonth[month] = {
+                        mes: new Date(d.fecha).toLocaleDateString("es-AR", { month: "short", year: "2-digit" }),
+                        oficial: 0,
+                        blue: 0,
+                    };
+                }
+                byMonth[month][key] = d.venta;
+            });
+        };
+        process(oficial, "oficial");
+        process(blue, "blue");
+
+        const result = Object.values(byMonth).slice(-13);
+        return result.length > 0 ? result : FALLBACK.dolar;
+    } catch (e) {
+        t.clear();
+        console.error("[getDolarHistorico] Error:", e);
+        return FALLBACK.dolar;
+    }
+}
+
+// ── Reservas (datos.gob.ar) ─────────────────────────────────
+export async function getReservas() {
+    const t = withTimeout(8000);
+    try {
         const url = "https://apis.datos.gob.ar/series/api/series/?ids=116.4_TCRZE_0_A_23_0&limit=400&sort=desc&format=json";
-        const res = await fetch(url, {
-            next: { revalidate: 3600 },
-            headers: { "Accept": "application/json" },
-        });
+        const res = await fetch(url, { next: { revalidate: 86400 }, signal: t.signal });
+        t.clear();
         if (!res.ok) throw new Error(`Reservas API error: ${res.status}`);
         const json = await res.json();
         const rows = (json.data ?? []) as [string, number | null][];
         if (rows.length === 0) return FALLBACK.reservas;
 
-        // Agrupar por mes
         const byMonth: Record<string, { mes: string; valor: number; neta: number }> = {};
-        rows.reverse().forEach(([fecha, valor]) => {
-            if (fecha && valor !== null) {
-                const key = fecha.slice(0, 7);
-                const bruta = Math.round(valor / 100) / 10; // Convert millones to billions
-                const neta = Math.round((bruta - 22.5) * 10) / 10;
+        rows.forEach(([fecha, bruta]) => {
+            if (fecha && bruta !== null) {
+                const key = fecha.substring(0, 7);
+                const neta = Math.round((bruta * 0.48) * 10) / 10;
                 byMonth[key] = {
                     mes: new Date(fecha).toLocaleDateString("es-AR", { month: "short", year: "2-digit" }),
                     valor: bruta,
@@ -207,33 +173,35 @@ export async function getReservas() {
         const result = Object.values(byMonth).slice(-13);
         return result.length > 0 ? result : FALLBACK.reservas;
     } catch (e) {
+        t.clear();
         console.error("[getReservas] Error, using fallback:", e);
         return FALLBACK.reservas;
     }
 }
 
 // ── Tasa BADLAR (argentinadatos.com) ────────────────────────
-// Usamos las tasas de plazo fijo como proxy
 export async function getTasaBadlar() {
+    const t = withTimeout();
     try {
         const res = await fetch(`${ARGDATA}/finanzas/tasas/plazoFijo`, {
             next: { revalidate: 3600 },
-            headers: { "Accept": "application/json" },
+            signal: t.signal,
         });
+        t.clear();
         if (!res.ok) throw new Error(`Tasas API error: ${res.status}`);
         const json = await res.json() as { entidad: string; tnaClientes: number | null }[];
         if (!Array.isArray(json) || json.length === 0) return 29.0;
 
-        // Calcular promedio de TNA de bancos que tienen dato
         const tasas = json
             .map(b => b.tnaClientes)
             .filter((t): t is number => t !== null && t > 0)
-            .map(t => t * 100); // Convertir de decimal a porcentaje
+            .map(t => t * 100);
 
         if (tasas.length === 0) return 29.0;
         const promedio = tasas.reduce((a, b) => a + b, 0) / tasas.length;
         return Math.round(promedio * 10) / 10;
     } catch (e) {
+        t.clear();
         console.error("[getTasaBadlar] Error:", e);
         return 29.0;
     }
@@ -289,7 +257,7 @@ const FALLBACK = {
         { fuente: "Ámbito", tiempo: "Hace 15 min", titulo: "El BCRA compró USD 85 millones en el mercado cambiario", tag: "BCRA", tagColor: "accent", link: "https://www.ambito.com" },
         { fuente: "Infobae", tiempo: "Hace 42 min", titulo: "Inflación de enero: 2.9% según INDEC", tag: "Precios", tagColor: "red", link: "https://www.infobae.com" },
         { fuente: "El Cronista", tiempo: "Hace 1h", titulo: "Bonos soberanos suben hasta 2% tras datos de reservas", tag: "Mercados", tagColor: "green", link: "https://www.cronista.com" },
-        { fuente: "La Nación", tiempo: "Hace 2h", titulo: "FMI adelantó desembolso: Argentina recibirá USD 2.000M", tag: "FMI", tagColor: "purple", link: "https://www.lanacion.com.ar" },
+        { fuente: "La Nación", tiempo: "Hace 2h", titulo: "FMI adelantó desembolso: Argentina recibirá USD 2.000M", tag: "Fiscal", tagColor: "purple", link: "https://www.lanacion.com.ar" },
         { fuente: "Bloomberg", tiempo: "Hace 3h", titulo: "Riesgo país en 524 puntos, el más bajo en 7 años", tag: "Global", tagColor: "yellow", link: "https://www.bloomberg.com" },
         { fuente: "Ámbito", tiempo: "Hace 4h", titulo: "Recaudación tributaria creció 8% real en febrero", tag: "Fiscal", tagColor: "green", link: "https://www.ambito.com" },
     ],

@@ -782,13 +782,13 @@ const ResumenTab = ({ data }: DashboardProps) => (
                 <BarChart data={data.inflacion.length ? data.inflacion : defaultInflacion}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-color)" opacity={0.5} />
                     <XAxis dataKey="mes" tick={{ fill: "var(--muted)", fontSize: 10, fontWeight: 600 }} axisLine={false} tickLine={false} />
-                    <YAxis tick={{ fill: "var(--muted)", fontSize: 10 }} unit="%" axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fill: "#e2e8f0", fontSize: 10, fontWeight: 700 }} unit="%" axisLine={false} tickLine={false} />
                     <Tooltip
                         cursor={{ fill: 'var(--card-secondary)', opacity: 0.4 }}
                         contentStyle={{ backgroundColor: "var(--card-secondary)", border: "1px solid var(--border-color)", borderRadius: "12px", boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1)" }}
-                        itemStyle={{ color: "var(--red)", fontWeight: "black" }}
+                        itemStyle={{ color: "#f59e0b", fontWeight: "black" }}
                     />
-                    <Bar dataKey="valor" fill="var(--red)" radius={[6, 6, 0, 0]} barSize={32} />
+                    <Bar dataKey="valor" fill="#f59e0b" radius={[6, 6, 0, 0]} barSize={32} />
                 </BarChart>
             </ResponsiveContainer>
         </ChartCard>
@@ -861,10 +861,10 @@ const PreciosTab = ({ data }: DashboardProps) => (
                 <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={data.inflacion.length ? data.inflacion : defaultInflacion}>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-color)" opacity={0.4} />
-                        <XAxis dataKey="mes" tick={{ fill: "var(--muted)", fontSize: 11, fontWeight: 700 }} axisLine={false} tickLine={false} />
-                        <YAxis tick={{ fill: "var(--muted)", fontSize: 11 }} unit="%" axisLine={false} tickLine={false} />
+                        <XAxis dataKey="mes" tick={{ fill: "#e2e8f0", fontSize: 11, fontWeight: 700 }} axisLine={false} tickLine={false} />
+                        <YAxis tick={{ fill: "#e2e8f0", fontSize: 11, fontWeight: 700 }} unit="%" axisLine={false} tickLine={false} />
                         <Tooltip contentStyle={{ backgroundColor: "var(--card-secondary)", border: "1px solid var(--border-color)", borderRadius: "16px", padding: "12px" }} cursor={{ fill: 'var(--card-secondary)', opacity: 0.3 }} />
-                        <Bar dataKey="valor" fill="var(--red)" radius={[8, 8, 0, 0]} barSize={40} />
+                        <Bar dataKey="valor" fill="#f59e0b" radius={[8, 8, 0, 0]} barSize={40} />
                     </BarChart>
                 </ResponsiveContainer>
             </ChartCard>
@@ -876,8 +876,8 @@ const PreciosTab = ({ data }: DashboardProps) => (
                     val: `${data.inflacion.length ? data.inflacion[data.inflacion.length - 1].valor : '2.4'}%`,
                     color: "text-danger", border: "border-danger/30"
                 },
-                { label: "Consenso 2025", val: "4.8%", color: "text-warning", border: "border-warning/30" },
-                { label: "Interanual", val: "66.2%", color: "text-info", border: "border-info/30" },
+                { label: "Proyección Feb 26", val: "~3.0%", color: "text-warning", border: "border-warning/30" },
+                { label: "Interanual", val: "~36%", color: "text-info", border: "border-info/30" },
                 { label: "Objetivo BCRA", val: "2.0%", color: "text-success", border: "border-success/30" }
             ].map(i => (
                 <div key={i.label} className={cn("bg-card border p-6 rounded-2xl shadow-sm transition-all hover:shadow-md hover:translate-x-1", i.border)}>
@@ -1141,13 +1141,28 @@ const NoticiasTab = () => {
     );
 };
 
+const calendarioImages: Record<string, string> = {
+    "BCRA": "https://images.unsplash.com/photo-1526304640581-d334cdbbf45e?w=200&h=200&fit=crop",
+    "INDEC": "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=200&h=200&fit=crop",
+    "Deuda": "https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=200&h=200&fit=crop",
+};
+
 const CalendarioTab = () => (
     <div className="max-w-4xl mx-auto space-y-5">
         {calendario.map((ev, i) => (
             <div key={i} className={cn(
-                "bg-card border rounded-3xl p-6 flex items-center gap-8 transition-all hover:shadow-xl hover:translate-x-1",
+                "bg-card border rounded-3xl p-5 flex items-center gap-5 transition-all hover:shadow-xl hover:translate-x-1 overflow-hidden",
                 ev.dia === "Hoy" ? "border-accent ring-4 ring-accent/5 bg-accent/[0.02] shadow-accent/5" : "border-border shadow-sm"
             )}>
+                {/* Image thumbnail */}
+                <div className="hidden sm:block w-20 h-20 rounded-2xl overflow-hidden shrink-0 border border-border/50">
+                    <img
+                        src={calendarioImages[ev.tipo] || calendarioImages["BCRA"]}
+                        alt={ev.tipo}
+                        className="w-full h-full object-cover hover:scale-110 transition-transform duration-300"
+                        loading="lazy"
+                    />
+                </div>
                 <div className="min-w-[70px] text-center">
                     <div className={cn("text-[10px] font-black uppercase tracking-[0.2em] mb-1", ev.dia === 'Hoy' ? 'text-accent' : 'text-muted')}>{ev.dia}</div>
                     <div className="text-2xl font-black tracking-tighter leading-none">{ev.fecha.split(' ')[0]}</div>
