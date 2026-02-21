@@ -781,14 +781,14 @@ const ResumenTab = ({ data }: DashboardProps) => (
             <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={data.inflacion.length ? data.inflacion : defaultInflacion}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-color)" opacity={0.5} />
-                    <XAxis dataKey="mes" tick={{ fill: "var(--muted)", fontSize: 10, fontWeight: 600 }} axisLine={false} tickLine={false} />
+                    <XAxis dataKey="mes" tick={{ fill: "#e2e8f0", fontSize: 10, fontWeight: 600 }} axisLine={false} tickLine={false} />
                     <YAxis tick={{ fill: "#e2e8f0", fontSize: 10, fontWeight: 700 }} unit="%" axisLine={false} tickLine={false} />
                     <Tooltip
                         cursor={{ fill: 'var(--card-secondary)', opacity: 0.4 }}
                         contentStyle={{ backgroundColor: "var(--card-secondary)", border: "1px solid var(--border-color)", borderRadius: "12px", boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1)" }}
-                        itemStyle={{ color: "#f59e0b", fontWeight: "black" }}
+                        itemStyle={{ color: "var(--red)", fontWeight: "black" }}
                     />
-                    <Bar dataKey="valor" fill="#f59e0b" radius={[6, 6, 0, 0]} barSize={32} />
+                    <Bar dataKey="valor" fill="var(--red)" radius={[6, 6, 0, 0]} barSize={32} />
                 </BarChart>
             </ResponsiveContainer>
         </ChartCard>
@@ -864,7 +864,7 @@ const PreciosTab = ({ data }: DashboardProps) => (
                         <XAxis dataKey="mes" tick={{ fill: "#e2e8f0", fontSize: 11, fontWeight: 700 }} axisLine={false} tickLine={false} />
                         <YAxis tick={{ fill: "#e2e8f0", fontSize: 11, fontWeight: 700 }} unit="%" axisLine={false} tickLine={false} />
                         <Tooltip contentStyle={{ backgroundColor: "var(--card-secondary)", border: "1px solid var(--border-color)", borderRadius: "16px", padding: "12px" }} cursor={{ fill: 'var(--card-secondary)', opacity: 0.3 }} />
-                        <Bar dataKey="valor" fill="#f59e0b" radius={[8, 8, 0, 0]} barSize={40} />
+                        <Bar dataKey="valor" fill="var(--red)" radius={[8, 8, 0, 0]} barSize={40} />
                     </BarChart>
                 </ResponsiveContainer>
             </ChartCard>
