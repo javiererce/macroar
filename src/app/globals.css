@@ -1,0 +1,91 @@
+@import "tailwindcss";
+
+@theme {
+  --color-background: var(--bg);
+  --color-card: var(--card);
+  --color-card-secondary: var(--card2);
+  --color-border: var(--border-color);
+  --color-accent: var(--accent);
+  --color-success: var(--green);
+  --color-danger: var(--red);
+  --color-warning: var(--yellow);
+  --color-info: var(--purple);
+  --color-economy: var(--orange);
+  --color-foreground: var(--text);
+  --color-muted: var(--muted);
+  --color-subtle: var(--sub);
+
+  --animate-spin-slow: spin 3s linear infinite;
+  --animate-pulse-slow: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+:root {
+  --bg: #f8fafc;
+  --card: #ffffff;
+  --card2: #f1f5f9;
+  --border-color: #e2e8f0;
+  --accent: #2563eb;
+  --green: #10b981;
+  --red: #ef4444;
+  --yellow: #f59e0b;
+  --purple: #8b5cf6;
+  --orange: #f97316;
+  --text: #0f172a;
+  --muted: #64748b;
+  --sub: #cbd5e1;
+
+  --background: var(--bg);
+  --foreground: var(--text);
+}
+
+.dark {
+  --bg: #030712;
+  --card: #0f172a;
+  --card2: #1e293b;
+  --border-color: #334155;
+  --accent: #3b82f6;
+  --green: #10b981;
+  --red: #ef4444;
+  --yellow: #f59e0b;
+  --purple: #8b5cf6;
+  --orange: #f97316;
+  --text: #f9fafb;
+  --muted: #94a3b8;
+  --sub: #475569;
+
+  --background: var(--bg);
+  --foreground: var(--text);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: system-ui, -apple-system, sans-serif;
+  transition: background 0.3s, color 0.3s;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes pulse {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.4;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
