@@ -98,15 +98,15 @@ const KPI = ({ icon, title, value, sub, trend, trendUp, color, updated, tooltip 
     };
 
     return (
-        <div className={cn("bg-card border border-border rounded-xl p-4 flex-1 min-w-[140px] border-l-4 transition-all hover:translate-y-[-2px]", colorMap[color] || "border-l-accent")}>
-            <div className="flex items-center justify-between mb-1">
-                <span className="text-muted text-[10px] uppercase tracking-wider flex items-center gap-1 font-semibold">
+        <div className={cn("bg-card border border-border/40 rounded-3xl p-6 flex-1 min-w-[140px] border-l-[6px] transition-all hover:translate-y-[-2px] hover:shadow-2xl", colorMap[color] || "border-l-accent")}>
+            <div className="flex items-center justify-between mb-2">
+                <span className="text-muted text-[11px] uppercase tracking-[0.1em] flex items-center gap-1.5 font-bold">
                     {typeof icon === 'string' ? icon : icon} {title}
                 </span>
                 <InfoTip text={tooltip} />
             </div>
-            <div className="text-foreground text-xl font-bold mb-1">{value}</div>
-            <div className="flex justify-between items-center">
+            <div className="text-foreground text-3xl font-serif tracking-tight font-black mb-1">{value}</div>
+            <div className="flex justify-between items-center mt-3">
                 <div className="flex gap-1.5 items-center">
                     {trend && (
                         <span className={cn("text-[11px] font-semibold flex items-center gap-0.5", trendUp ? "text-danger" : "text-success")}>
@@ -132,26 +132,26 @@ interface ChartCardProps {
 }
 
 const ChartCard = ({ title, source, badge, badgeColor, children }: ChartCardProps) => (
-    <div className="bg-card border border-border rounded-xl p-5 shadow-sm">
-        <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
-            <div className="flex items-center gap-2">
-                <h3 className="text-foreground text-sm font-semibold">{title}</h3>
+    <div className="bg-card border border-border/30 rounded-[32px] p-6 shadow-xl">
+        <div className="flex justify-between items-center mb-6 flex-wrap gap-2">
+            <div className="flex items-center gap-3">
+                <h3 className="text-foreground text-lg font-serif font-black tracking-tight">{title}</h3>
                 {badge && (
-                    <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded", badgeColor)}>
+                    <span className={cn("text-[10px] font-black uppercase px-2 py-0.5 rounded-lg", badgeColor)}>
                         {badge}
                     </span>
                 )}
             </div>
-            <span className="text-muted text-[10px] italic">{source}</span>
+            <span className="text-muted text-[11px] font-medium opacity-50">{source}</span>
         </div>
-        <div className="h-[200px] w-full">
+        <div className="h-[260px] w-full">
             {children}
         </div>
     </div>
 );
 
 const SponsorBanner = () => (
-    <div className="bg-gradient-to-r from-accent to-purple-600 rounded-2xl p-6 mb-8 text-white shadow-xl flex flex-col md:flex-row justify-between items-center gap-6 relative overflow-hidden group">
+    <div className="bg-gradient-to-r from-accent to-purple-800 rounded-[32px] p-8 mb-10 text-white shadow-2xl flex flex-col md:flex-row justify-between items-center gap-8 relative overflow-hidden group">
         <div className="relative z-10 text-center md:text-left">
             <h3 className="text-xl md:text-2xl font-black mb-2 tracking-tight">Anuncie su empresa aquí</h3>
             <p className="text-white/80 text-sm md:text-base font-medium max-w-md">Llegue a miles de profesionales y tomadores de decisiones del sector financiero y corporativo.</p>
@@ -637,13 +637,16 @@ const LiveCounter = () => {
     }, []);
 
     return (
-        <div className="bg-success/10 text-success border border-success/20 px-3 py-2 rounded-full text-[9px] font-black flex items-center gap-2 shadow-sm">
-            <span className="relative flex h-2 w-2">
+        <div className="bg-success/5 border-2 border-success/30 px-5 py-2.5 rounded-full text-xs font-black flex items-center gap-3 shadow-[0_0_20px_rgba(16,185,129,0.15)] transition-all hover:bg-success/10 hover:shadow-[0_0_25px_rgba(16,185,129,0.25)] hover:scale-105 cursor-default">
+            <span className="relative flex h-2.5 w-2.5">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-success"></span>
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-success shadow-[0_0_8px_var(--green)]"></span>
             </span>
-            <span className="hidden sm:inline">{visitors.toLocaleString("es-AR")} EN VIVO</span>
-            <span className="sm:hidden">EN VIVO</span>
+            <span className="hidden sm:inline tracking-wider">
+                <span className="text-white text-sm">{visitors.toLocaleString("es-AR")}</span>{" "}
+                <span className="text-success/80">EN VIVO</span>
+            </span>
+            <span className="sm:hidden text-success">EN VIVO</span>
         </div>
     );
 };
@@ -831,14 +834,14 @@ const ResumenTab = ({ data }: DashboardProps) => (
             <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={data.inflacion.length ? data.inflacion : defaultInflacion}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-color)" opacity={0.5} />
-                    <XAxis dataKey="mes" tick={{ fill: "#e2e8f0", fontSize: 10, fontWeight: 600 }} axisLine={false} tickLine={false} />
-                    <YAxis tick={{ fill: "#e2e8f0", fontSize: 10, fontWeight: 700 }} unit="%" axisLine={false} tickLine={false} />
+                    <XAxis dataKey="mes" tick={{ fill: "#e2e8f0", fontSize: 12, fontWeight: 600 }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fill: "#e2e8f0", fontSize: 12, fontWeight: 700 }} unit="%" axisLine={false} tickLine={false} />
                     <Tooltip
                         cursor={{ fill: 'var(--card-secondary)', opacity: 0.4 }}
-                        contentStyle={{ backgroundColor: "var(--card-secondary)", border: "1px solid var(--border-color)", borderRadius: "12px", boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1)" }}
-                        itemStyle={{ color: "var(--red)", fontWeight: "black" }}
+                        contentStyle={{ backgroundColor: "#141416", border: "1px solid #333338", borderRadius: "16px", boxShadow: "0 15px 35px -5px rgba(0, 0, 0, 0.5)", padding: "16px" }}
+                        itemStyle={{ color: "var(--accent)", fontWeight: "black", fontSize: "16px" }}
                     />
-                    <Bar dataKey="valor" fill="var(--red)" radius={[6, 6, 0, 0]} barSize={32} />
+                    <Bar dataKey="valor" fill="var(--accent)" radius={[8, 8, 0, 0]} barSize={36} />
                 </BarChart>
             </ResponsiveContainer>
         </ChartCard>
@@ -853,8 +856,8 @@ const ResumenTab = ({ data }: DashboardProps) => (
                         </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-color)" opacity={0.5} />
-                    <XAxis dataKey="dia" tick={{ fill: "#e2e8f0", fontSize: 10, fontWeight: 600 }} axisLine={false} tickLine={false} />
-                    <YAxis tick={{ fill: "#e2e8f0", fontSize: 10 }} domain={[270, 450]} axisLine={false} tickLine={false} />
+                    <XAxis dataKey="dia" tick={{ fill: "#e2e8f0", fontSize: 12, fontWeight: 600 }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fill: "#e2e8f0", fontSize: 12 }} domain={[270, 450]} axisLine={false} tickLine={false} />
                     <Tooltip
                         content={({ active, payload, label }) => {
                             if (active && payload && payload.length) {
@@ -877,8 +880,8 @@ const ResumenTab = ({ data }: DashboardProps) => (
             <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={data.dolarHistorico.length ? data.dolarHistorico : defaultDolarHistorico}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-color)" opacity={0.5} />
-                    <XAxis dataKey="mes" tick={{ fill: "#e2e8f0", fontSize: 10, fontWeight: 600 }} axisLine={false} tickLine={false} />
-                    <YAxis tick={{ fill: "#e2e8f0", fontSize: 10 }} axisLine={false} tickLine={false} />
+                    <XAxis dataKey="mes" tick={{ fill: "#e2e8f0", fontSize: 12, fontWeight: 600 }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fill: "#e2e8f0", fontSize: 12 }} axisLine={false} tickLine={false} />
                     <Tooltip contentStyle={{ backgroundColor: "var(--card-secondary)", border: "1px solid var(--border-color)", borderRadius: "12px" }} />
                     <Legend iconType="circle" wrapperStyle={{ fontSize: "11px", paddingTop: "15px", fontWeight: "bold" }} />
                     <Line type="monotone" dataKey="oficial" stroke="var(--accent)" strokeWidth={4} dot={false} name="Oficial BNA" />
@@ -891,8 +894,8 @@ const ResumenTab = ({ data }: DashboardProps) => (
             <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={mockSalarios}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-color)" opacity={0.5} />
-                    <XAxis dataKey="mes" tick={{ fill: "#e2e8f0", fontSize: 10, fontWeight: 600 }} axisLine={false} tickLine={false} />
-                    <YAxis tick={{ fill: "#e2e8f0", fontSize: 10 }} domain={[90, 150]} axisLine={false} tickLine={false} />
+                    <XAxis dataKey="mes" tick={{ fill: "#e2e8f0", fontSize: 12, fontWeight: 600 }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fill: "#e2e8f0", fontSize: 12 }} domain={[90, 150]} axisLine={false} tickLine={false} />
                     <Tooltip contentStyle={{ backgroundColor: "var(--card-secondary)", border: "1px solid var(--border-color)", borderRadius: "12px" }} />
                     <Legend iconType="circle" wrapperStyle={{ fontSize: "11px", paddingTop: "15px", fontWeight: "bold" }} />
                     <ReferenceLine y={100} stroke="var(--muted)" strokeDasharray="4 4" opacity={0.8} label={{ value: 'BASE', fill: 'var(--muted)', fontSize: 9, fontWeight: 900, position: 'right' }} />
@@ -913,8 +916,12 @@ const PreciosTab = ({ data }: DashboardProps) => (
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-color)" opacity={0.4} />
                         <XAxis dataKey="mes" tick={{ fill: "#e2e8f0", fontSize: 11, fontWeight: 700 }} axisLine={false} tickLine={false} />
                         <YAxis tick={{ fill: "#e2e8f0", fontSize: 11, fontWeight: 700 }} unit="%" axisLine={false} tickLine={false} />
-                        <Tooltip contentStyle={{ backgroundColor: "var(--card-secondary)", border: "1px solid var(--border-color)", borderRadius: "16px", padding: "12px" }} cursor={{ fill: 'var(--card-secondary)', opacity: 0.3 }} />
-                        <Bar dataKey="valor" fill="var(--red)" radius={[8, 8, 0, 0]} barSize={40} />
+                        <Tooltip
+                            contentStyle={{ backgroundColor: "#141416", border: "1px solid #333338", borderRadius: "16px", padding: "16px", boxShadow: "0 20px 40px -5px rgba(0, 0, 0, 0.6)" }}
+                            cursor={{ fill: 'var(--card-secondary)', opacity: 0.3 }}
+                            itemStyle={{ color: "var(--accent)", fontWeight: "black", fontSize: "18px" }}
+                        />
+                        <Bar dataKey="valor" fill="var(--accent)" radius={[10, 10, 0, 0]} barSize={44} />
                     </BarChart>
                 </ResponsiveContainer>
             </ChartCard>
@@ -991,8 +998,8 @@ const ExternoTab = ({ data }: DashboardProps) => (
                         </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-color)" opacity={0.4} />
-                    <XAxis dataKey="mes" tick={{ fill: "#e2e8f0", fontSize: 10, fontWeight: 600 }} axisLine={false} />
-                    <YAxis tick={{ fill: "#e2e8f0", fontSize: 10 }} axisLine={false} />
+                    <XAxis dataKey="mes" tick={{ fill: "#e2e8f0", fontSize: 12, fontWeight: 600 }} axisLine={false} />
+                    <YAxis tick={{ fill: "#e2e8f0", fontSize: 12 }} axisLine={false} />
                     <Tooltip contentStyle={{ backgroundColor: "var(--card-secondary)", border: "1px solid var(--border-color)", borderRadius: "12px" }} />
                     <Legend verticalAlign="top" height={36} iconType="circle" />
                     <Area type="monotone" dataKey="valor" name="Brutas" stroke="var(--green)" fill="url(#rg)" strokeWidth={4} />
@@ -1011,8 +1018,8 @@ const ExternoTab = ({ data }: DashboardProps) => (
                         </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-color)" opacity={0.4} />
-                    <XAxis dataKey="mes" tick={{ fill: "#e2e8f0", fontSize: 10, fontWeight: 600 }} axisLine={false} />
-                    <YAxis tick={{ fill: "#e2e8f0", fontSize: 10 }} axisLine={false} />
+                    <XAxis dataKey="mes" tick={{ fill: "#e2e8f0", fontSize: 12, fontWeight: 600 }} axisLine={false} />
+                    <YAxis tick={{ fill: "#e2e8f0", fontSize: 12 }} axisLine={false} />
                     <Tooltip contentStyle={{ backgroundColor: "var(--card-secondary)", border: "1px solid var(--border-color)", borderRadius: "12px" }} />
                     <Area type="monotone" dataKey="valor" stroke="var(--purple)" fill="url(#rpg)" strokeWidth={4} />
                 </AreaChart>
@@ -1047,7 +1054,7 @@ const CammesaTab = () => (
                         </defs>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-color)" opacity={0.4} />
                         <XAxis dataKey="dia" tick={{ fill: "#e2e8f0", fontSize: 9, fontWeight: 700 }} axisLine={false} interval={4} />
-                        <YAxis tick={{ fill: "#e2e8f0", fontSize: 10 }} domain={[270, 460]} axisLine={false} />
+                        <YAxis tick={{ fill: "#e2e8f0", fontSize: 12 }} domain={[270, 460]} axisLine={false} />
                         <Tooltip />
                         <Area type="monotone" dataKey="valor" stroke="var(--orange)" fill="url(#cg2)" strokeWidth={4} />
                     </AreaChart>
@@ -1058,9 +1065,9 @@ const CammesaTab = () => (
                 <ResponsiveContainer width="100%" height="100%">
                     <ComposedChart data={mockCammesaMensual}>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-color)" opacity={0.4} />
-                        <XAxis dataKey="mes" tick={{ fill: "#e2e8f0", fontSize: 10, fontWeight: 700 }} axisLine={false} />
-                        <YAxis yAxisId="left" tick={{ fill: "#e2e8f0", fontSize: 10 }} domain={[340, 430]} axisLine={false} />
-                        <YAxis yAxisId="right" orientation="right" tick={{ fill: "var(--success)", fontSize: 10, fontWeight: 900 }} unit="%" axisLine={false} />
+                        <XAxis dataKey="mes" tick={{ fill: "#e2e8f0", fontSize: 12, fontWeight: 700 }} axisLine={false} />
+                        <YAxis yAxisId="left" tick={{ fill: "#e2e8f0", fontSize: 12 }} domain={[340, 430]} axisLine={false} />
+                        <YAxis yAxisId="right" orientation="right" tick={{ fill: "var(--success)", fontSize: 12, fontWeight: 900 }} unit="%" axisLine={false} />
                         <Tooltip contentStyle={{ borderRadius: '12px' }} />
                         <Legend wrapperStyle={{ fontSize: "11px", paddingTop: "20px", fontWeight: "black" }} />
                         <Bar yAxisId="left" dataKey="valor" fill="var(--orange)" radius={[4, 4, 0, 0]} opacity={0.8} name="GWh/día" barSize={28} />
@@ -1092,10 +1099,10 @@ const SalariosTab = () => (
                     <LineChart data={mockSalarios}>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-color)" opacity={0.4} />
                         <XAxis dataKey="mes" tick={{ fill: "#e2e8f0", fontSize: 11, fontWeight: 700 }} axisLine={false} />
-                        <YAxis tick={{ fill: "#e2e8f0", fontSize: 10 }} domain={[90, 150]} axisLine={false} />
+                        <YAxis tick={{ fill: "#e2e8f0", fontSize: 12 }} domain={[90, 150]} axisLine={false} />
                         <Tooltip />
                         <Legend wrapperStyle={{ fontSize: "11px", paddingTop: "15px", fontWeight: "bold" }} />
-                        <ReferenceLine y={100} stroke="var(--muted)" strokeDasharray="5 5" label={{ value: 'BASE 100', fill: 'var(--muted)', fontSize: 10, fontWeight: 900, position: 'insideRight' }} />
+                        <ReferenceLine y={100} stroke="var(--muted)" strokeDasharray="5 5" label={{ value: 'BASE 100', fill: 'var(--muted)', fontSize: 12, fontWeight: 900, position: 'insideRight' }} />
                         <Line type="monotone" dataKey="salario" stroke="var(--green)" strokeWidth={4} dot={false} name="Salario Nominal" />
                         <Line type="monotone" dataKey="inflacion" stroke="var(--red)" strokeWidth={4} dot={false} name="IPC Acumulado" strokeDasharray="6 4" />
                         <Line type="monotone" dataKey="real" stroke="var(--accent)" strokeWidth={3} dot={{ r: 3, fill: 'var(--accent)' }} name="Salario Real (K)" />
@@ -1107,8 +1114,8 @@ const SalariosTab = () => (
                 <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={mockSalariosSector} layout="vertical" margin={{ left: 20 }}>
                         <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="var(--border-color)" opacity={0.4} />
-                        <XAxis type="number" tick={{ fill: "#e2e8f0", fontSize: 10, fontWeight: 700 }} unit="%" axisLine={false} />
-                        <YAxis type="category" dataKey="sector" tick={{ fill: "#e2e8f0", fontSize: 10, fontWeight: 800 }} width={120} axisLine={false} stroke="transparent" />
+                        <XAxis type="number" tick={{ fill: "#e2e8f0", fontSize: 12, fontWeight: 700 }} unit="%" axisLine={false} />
+                        <YAxis type="category" dataKey="sector" tick={{ fill: "#e2e8f0", fontSize: 12, fontWeight: 800 }} width={120} axisLine={false} stroke="transparent" />
                         <Tooltip cursor={{ fill: 'var(--card-secondary)', opacity: 0.3 }} contentStyle={{ borderRadius: '12px' }} />
                         <Bar dataKey="variacion" name="Var. Nominal" fill="var(--green)" radius={[0, 6, 6, 0]} barSize={24} />
                         <Bar dataKey="real" name="Var. Real" fill="var(--accent)" radius={[0, 6, 6, 0]} barSize={24} />
