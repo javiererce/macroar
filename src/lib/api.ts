@@ -6,7 +6,7 @@
 
 const ARGDATA = "https://api.argentinadatos.com/v1";
 
-function withTimeout(ms = 5000): { signal: AbortSignal; clear: () => void } {
+function withTimeout(ms = 8000): { signal: AbortSignal; clear: () => void } {
     const controller = new AbortController();
     const id = setTimeout(() => controller.abort(), ms);
     return { signal: controller.signal, clear: () => clearTimeout(id) };

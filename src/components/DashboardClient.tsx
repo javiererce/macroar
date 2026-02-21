@@ -652,23 +652,10 @@ const LiveCounter = () => {
 
 export default function DashboardClient({ data }: DashboardProps) {
     const [dark, setDark] = useState(true);
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(false); // Data is pre-fetched via SSR
     const [tab, setTab] = useState("resumen");
     const [alertOpen, setAlertOpen] = useState(false);
     const [exportOpen, setExportOpen] = useState(false);
-
-    useEffect(() => {
-        const timer = setTimeout(() => setLoading(false), 800);
-        return () => clearTimeout(timer);
-    }, []);
-
-    // Safety timeout: never stay in loading state forever
-    useEffect(() => {
-        const safetyTimeout = setTimeout(() => {
-            if (loading) setLoading(false);
-        }, 8000);
-        return () => clearTimeout(safetyTimeout);
-    }, [loading]);
 
     useEffect(() => {
         if (dark) {

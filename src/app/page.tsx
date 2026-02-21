@@ -45,6 +45,8 @@ export default async function HomePage() {
     lastUpdate: new Date().toISOString(),
   };
 
+  console.log("DATA FETCHED:", JSON.stringify(data).slice(0, 200));
+
   return (
     <Suspense fallback={<LoadingScreen />}>
       <DashboardClient data={data} />
