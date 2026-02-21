@@ -721,22 +721,24 @@ export default function DashboardClient({ data }: DashboardProps) {
             <main id="dashboard-main-content" className="max-w-[1400px] mx-auto p-5 md:p-8 animate-in fade-in duration-700">
                 <SponsorBanner />
 
-                {/* KPIs Grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-                    {loading
-                        ? Array(8).fill(0).map((_, i) => (
-                            <div key={i} className="bg-card border border-border rounded-xl p-4 flex-1">
-                                <Skel className="h-3 w-1/2 mb-3" />
-                                <Skel className="h-7 w-3/4 mb-4" />
-                                <div className="flex justify-between items-center">
-                                    <Skel className="h-3 w-1/3" />
-                                    <Skel className="h-4 w-1/4" />
+                {/* KPIs Grid — only on Resumen */}
+                {tab === "resumen" && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                        {loading
+                            ? Array(8).fill(0).map((_, i) => (
+                                <div key={i} className="bg-card border border-border rounded-xl p-4 flex-1">
+                                    <Skel className="h-3 w-1/2 mb-3" />
+                                    <Skel className="h-7 w-3/4 mb-4" />
+                                    <div className="flex justify-between items-center">
+                                        <Skel className="h-3 w-1/3" />
+                                        <Skel className="h-4 w-1/4" />
+                                    </div>
                                 </div>
-                            </div>
-                        ))
-                        : kpis.map(k => <KPI key={k.title} {...k} icon={k.icon} trendUp={k.trendUp ?? false} color={k.color} updated={k.updated} />)
-                    }
-                </div>
+                            ))
+                            : kpis.map(k => <KPI key={k.title} {...k} icon={k.icon} trendUp={k.trendUp ?? false} color={k.color} updated={k.updated} />)
+                        }
+                    </div>
+                )}
 
                 {/* Content Area */}
                 <div className="space-y-6">
@@ -1127,10 +1129,19 @@ const NoticiasTab = () => {
                             <h4 className="text-foreground font-bold text-[13px] leading-snug group-hover:text-accent transition-colors tracking-tight line-clamp-3">
                                 {n.titulo}
                             </h4>
-                            <div className="mt-3 flex items-center justify-between">
-                                <span className="text-muted text-[10px] opacity-60">Leer nota completa</span>
-                                <div className="p-1.5 rounded-full group-hover:bg-accent/10 transition-colors">
-                                    <ChevronRight size={14} className="text-muted group-hover:text-accent transition-all group-hover:translate-x-1" />
+                            <div className="mt-3 space-y-2">
+                                <div className="flex items-center gap-2 text-[10px] text-muted">
+                                    <span className="font-bold">{n.fuente}</span>
+                                    <span className="opacity-40">·</span>
+                                    <span className="opacity-70">🕐 {n.tiempo}</span>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                    <span className="text-accent/70 text-[10px] font-medium truncate max-w-[70%]">
+                                        🔗 {n.link.replace(/^https?:\/\/(www\.)?/, '').split('/')[0]}
+                                    </span>
+                                    <div className="p-1.5 rounded-full group-hover:bg-accent/10 transition-colors">
+                                        <ChevronRight size={14} className="text-muted group-hover:text-accent transition-all group-hover:translate-x-1" />
+                                    </div>
                                 </div>
                             </div>
                         </div>
