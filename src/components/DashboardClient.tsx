@@ -290,60 +290,207 @@ const AlertModal = ({ onClose }: { onClose: () => void }) => {
 const ExportModal = ({ data, onClose }: { data: DashboardData, onClose: () => void }) => {
     const [loading, setLoading] = useState<string | null>(null);
     const [done, setDone] = useState<string | null>(null);
+    const [step, setStep] = useState<"select" | "format">("select");
+    const [selected, setSelected] = useState<string>("all");
+
+    const indicadores = [
+        { id: "all", label: "📊 Todos los indicadores", desc: "Informe completo" },
+        { id: "inflacion", label: "🔥 Inflación", desc: "IPC mensual" },
+        { id: "dolar", label: "💵 Tipo de Cambio", desc: "Oficial, Blue, MEP, CCL" },
+        { id: "reservas", label: "🏦 Reservas BCRA", desc: "Brutas y netas" },
+        { id: "riesgo", label: "⚠️ Riesgo País", desc: "EMBI+ JPMorgan" },
+    ];
+
+    const getSheetData = (id: string) => {
+        const sheets: { name: string; data: Record<string, unknown>[] }[] = [];
+        if (id === "all" || id === "inflacion") {
+            sheets.push({ name: "Inflacion", data: data.inflacion.map(d => ({ Mes: d.mes, "Variación (%)": d.valor })) });
+        }
+        if (id === "all" || id === "dolar") {
+            sheets.push({ name: "Dolar", data: data.dolarHistorico.map(d => ({ Mes: d.mes, Oficial: d.oficial, Blue: d.blue })) });
+            if (id === "dolar" || id === "all") {
+                sheets.push({ name: "Cotizacion Actual", data: [{ "Oficial BNA": data.dolares.oficial, "Blue": data.dolares.blue, "MEP": data.dolares.mep, "CCL": data.dolares.ccl }] });
+            }
+        }
+        if (id === "all" || id === "reservas") {
+            sheets.push({ name: "Reservas", data: data.reservas.map(d => ({ Mes: d.mes, "Brutas (USD B)": d.valor, "Netas Est. (USD B)": (d as any).neta ?? "N/A" })) });
+        }
+        if (id === "all" || id === "riesgo") {
+            sheets.push({ name: "Riesgo Pais", data: data.riesgoPais.historico.map(d => ({ Mes: d.mes, "Puntos Básicos": d.valor })) });
+        }
+        return sheets;
+    };
 
     const handleExport = async (type: string) => {
         setLoading(type);
         try {
+            const sheets = getSheetData(selected);
+            const dateStr = new Date().toISOString().split('T')[0];
+            const labelSelected = indicadores.find(i => i.id === selected)?.label?.replace(/^[^\s]+\s/, '') || "Reporte";
+
             if (type === "Excel" || type === "CSV") {
-                // Prepare data for sheets
-                const inflacionData = data.inflacion.map(d => ({ Mes: d.mes, Valor: d.valor }));
-                const reservasData = data.reservas.map(d => ({ Mes: d.mes, Valor: d.valor }));
-                const dolarData = data.dolarHistorico.map(d => ({ Mes: d.mes, Oficial: d.oficial, Blue: d.blue }));
-                const riesgoData = data.riesgoPais.historico.map(d => ({ Mes: d.mes, Valor: d.valor }));
-
                 const wb = XLSX.utils.book_new();
-
-                const wsInflacion = XLSX.utils.json_to_sheet(inflacionData);
-                XLSX.utils.book_append_sheet(wb, wsInflacion, "Inflacion");
-
-                const wsReservas = XLSX.utils.json_to_sheet(reservasData);
-                XLSX.utils.book_append_sheet(wb, wsReservas, "Reservas");
-
-                const wsDolar = XLSX.utils.json_to_sheet(dolarData);
-                XLSX.utils.book_append_sheet(wb, wsDolar, "Dolar");
-
-                const wsRiesgo = XLSX.utils.json_to_sheet(riesgoData);
-                XLSX.utils.book_append_sheet(wb, wsRiesgo, "Riesgo Pais");
-
-                if (type === "Excel") {
-                    XLSX.writeFile(wb, `MacroAR_Reporte_${new Date().toISOString().split('T')[0]}.xlsx`);
-                } else {
-                    XLSX.writeFile(wb, `MacroAR_Datos_${new Date().toISOString().split('T')[0]}.csv`, { bookType: 'csv' });
-                }
+                sheets.forEach(s => {
+                    const ws = XLSX.utils.json_to_sheet(s.data);
+                    XLSX.utils.book_append_sheet(wb, ws, s.name);
+                });
+                const ext = type === "Excel" ? "xlsx" : "csv";
+                const bookType = type === "Excel" ? "xlsx" : "csv";
+                XLSX.writeFile(wb, `MacroAR_${labelSelected.replace(/\s/g, '_')}_${dateStr}.${ext}`, { bookType: bookType as any });
             } else if (type === "PDF") {
-                const element = document.getElementById('dashboard-main-content');
-                if (element) {
-                    const canvas = await html2canvas(element, {
-                        scale: 1,
-                        useCORS: true,
-                        backgroundColor: '#030712', // Match dark bg hex
-                        logging: false,
-                        onclone: (clonedDoc) => {
-                            const body = clonedDoc.body;
-                            if (body) {
-                                body.style.backgroundColor = '#030712';
-                                body.style.color = '#f9fafb';
-                            }
-                        }
+                const pdf = new jsPDF('p', 'mm', 'a4');
+                const w = pdf.internal.pageSize.getWidth();
+                const h = pdf.internal.pageSize.getHeight();
+                let y = 0;
+
+                // ── Header gradient ──
+                pdf.setFillColor(5, 10, 25);
+                pdf.rect(0, 0, w, 50, 'F');
+                pdf.setFillColor(37, 99, 235);
+                pdf.rect(0, 46, w, 4, 'F');
+
+                // Logo text
+                pdf.setTextColor(255, 255, 255);
+                pdf.setFontSize(28);
+                pdf.setFont("helvetica", "bold");
+                pdf.text("Macro", 15, 25);
+                pdf.setTextColor(59, 130, 246);
+                pdf.text("AR", 52, 25);
+
+                // Subtitle
+                pdf.setTextColor(148, 163, 184);
+                pdf.setFontSize(9);
+                pdf.setFont("helvetica", "normal");
+                pdf.text("INTELLIGENCE DASHBOARD", 15, 33);
+                pdf.text(`Generado: ${new Date().toLocaleDateString("es-AR", { day: "2-digit", month: "long", year: "numeric" })}`, 15, 39);
+
+                // Flag emoji and type
+                pdf.setTextColor(255, 255, 255);
+                pdf.setFontSize(10);
+                pdf.setFont("helvetica", "bold");
+                pdf.text(`REPORTE: ${labelSelected.toUpperCase()}`, w - 15, 25, { align: "right" });
+                pdf.setTextColor(148, 163, 184);
+                pdf.setFontSize(8);
+                pdf.text("macroar.vercel.app", w - 15, 33, { align: "right" });
+
+                y = 58;
+
+                // ── KPI Cards (only for "all") ──
+                if (selected === "all") {
+                    const kpis = [
+                        { label: "Inflación", value: `${data.inflacion.length ? data.inflacion[data.inflacion.length - 1].valor : "N/A"}%`, color: [239, 68, 68] },
+                        { label: "Dólar Oficial", value: `$${data.dolares.oficial}`, color: [59, 130, 246] },
+                        { label: "Dólar Blue", value: `$${data.dolares.blue}`, color: [245, 158, 11] },
+                        { label: "Riesgo País", value: `${data.riesgoPais.actual} pb`, color: [139, 92, 246] },
+                    ];
+                    const cardW = (w - 30 - 15) / 4;
+                    kpis.forEach((kpi, i) => {
+                        const x = 15 + i * (cardW + 5);
+                        pdf.setFillColor(15, 23, 42);
+                        pdf.roundedRect(x, y, cardW, 28, 3, 3, 'F');
+                        pdf.setDrawColor(kpi.color[0], kpi.color[1], kpi.color[2]);
+                        pdf.setLineWidth(0.8);
+                        pdf.line(x, y + 2, x, y + 26);
+
+                        pdf.setTextColor(148, 163, 184);
+                        pdf.setFontSize(7);
+                        pdf.setFont("helvetica", "bold");
+                        pdf.text(kpi.label.toUpperCase(), x + 5, y + 9);
+
+                        pdf.setTextColor(kpi.color[0], kpi.color[1], kpi.color[2]);
+                        pdf.setFontSize(14);
+                        pdf.text(kpi.value, x + 5, y + 21);
                     });
-                    const imgData = canvas.toDataURL('image/png');
-                    const pdf = new jsPDF('p', 'mm', 'a4');
-                    const imgProps = pdf.getImageProperties(imgData);
-                    const pdfWidth = pdf.internal.pageSize.getWidth();
-                    const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-                    pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-                    pdf.save(`MacroAR_Informe_${new Date().toISOString().split('T')[0]}.pdf`);
+                    y += 38;
                 }
+
+                // ── Data Tables ──
+                sheets.forEach((sheet, si) => {
+                    if (y > h - 40) {
+                        pdf.addPage();
+                        pdf.setFillColor(5, 10, 25);
+                        pdf.rect(0, 0, w, 12, 'F');
+                        pdf.setTextColor(148, 163, 184);
+                        pdf.setFontSize(7);
+                        pdf.text(`MacroAR Intelligence — ${labelSelected}`, 15, 8);
+                        pdf.text(`Pág ${pdf.getNumberOfPages()}`, w - 15, 8, { align: "right" });
+                        y = 20;
+                    }
+
+                    // Section title
+                    pdf.setFillColor(15, 23, 42);
+                    pdf.roundedRect(15, y, w - 30, 10, 2, 2, 'F');
+                    pdf.setTextColor(59, 130, 246);
+                    pdf.setFontSize(10);
+                    pdf.setFont("helvetica", "bold");
+                    pdf.text(`📊 ${sheet.name}`, 20, y + 7);
+                    y += 14;
+
+                    if (sheet.data.length === 0) {
+                        pdf.setTextColor(148, 163, 184);
+                        pdf.setFontSize(9);
+                        pdf.text("Sin datos disponibles", 20, y + 5);
+                        y += 12;
+                        return;
+                    }
+
+                    // Table header
+                    const cols = Object.keys(sheet.data[0]);
+                    const colW = (w - 30) / cols.length;
+
+                    pdf.setFillColor(30, 41, 59);
+                    pdf.rect(15, y, w - 30, 8, 'F');
+                    pdf.setTextColor(148, 163, 184);
+                    pdf.setFontSize(7);
+                    pdf.setFont("helvetica", "bold");
+                    cols.forEach((col, ci) => {
+                        pdf.text(col.toUpperCase(), 17 + ci * colW, y + 5.5);
+                    });
+                    y += 8;
+
+                    // Table rows
+                    pdf.setFont("helvetica", "normal");
+                    sheet.data.forEach((row, ri) => {
+                        if (y > h - 20) {
+                            pdf.addPage();
+                            pdf.setFillColor(5, 10, 25);
+                            pdf.rect(0, 0, w, 12, 'F');
+                            pdf.setTextColor(148, 163, 184);
+                            pdf.setFontSize(7);
+                            pdf.text(`MacroAR Intelligence — ${sheet.name}`, 15, 8);
+                            y = 20;
+                        }
+                        if (ri % 2 === 0) {
+                            pdf.setFillColor(15, 23, 42);
+                            pdf.rect(15, y, w - 30, 7, 'F');
+                        }
+                        pdf.setTextColor(249, 250, 251);
+                        pdf.setFontSize(8);
+                        cols.forEach((col, ci) => {
+                            const val = String((row as Record<string, unknown>)[col] ?? "");
+                            pdf.text(val, 17 + ci * colW, y + 5);
+                        });
+                        y += 7;
+                    });
+                    y += 8;
+                });
+
+                // ── Footer ──
+                const lastPage = pdf.getNumberOfPages();
+                for (let p = 1; p <= lastPage; p++) {
+                    pdf.setPage(p);
+                    pdf.setFillColor(5, 10, 25);
+                    pdf.rect(0, h - 15, w, 15, 'F');
+                    pdf.setDrawColor(59, 130, 246);
+                    pdf.setLineWidth(0.5);
+                    pdf.line(0, h - 15, w, h - 15);
+                    pdf.setTextColor(100, 116, 139);
+                    pdf.setFontSize(7);
+                    pdf.setFont("helvetica", "normal");
+                    pdf.text("© 2025-2026 MacroAR Intelligence · Desarrollado por Maximiliano Erce · macroar.vercel.app", w / 2, h - 7, { align: "center" });
+                }
+
+                pdf.save(`MacroAR_${labelSelected.replace(/\s/g, '_')}_${dateStr}.pdf`);
             }
             setDone(type);
         } catch (error) {
@@ -355,10 +502,10 @@ const ExportModal = ({ data, onClose }: { data: DashboardData, onClose: () => vo
     };
 
     return (
-        <div className="bg-card border border-border rounded-2xl w-full max-w-[380px] p-6 shadow-2xl">
+        <div className="bg-card border border-border rounded-2xl w-full max-w-[440px] p-6 shadow-2xl">
             <div className="flex justify-between items-center mb-6">
                 <h3 className="text-foreground text-lg font-bold flex items-center gap-2">
-                    <Download size={20} className="text-success" /> Exportar
+                    <Download size={20} className="text-success" /> Exportar Datos
                 </h3>
                 <button onClick={onClose} className="text-muted hover:text-foreground transition-colors"><X size={24} /></button>
             </div>
@@ -374,28 +521,64 @@ const ExportModal = ({ data, onClose }: { data: DashboardData, onClose: () => vo
                     <Loader2 size={48} className="text-accent animate-spin mx-auto mb-4" />
                     <p className="text-muted text-sm italic">Generando archivo {loading}...</p>
                 </div>
+            ) : step === "select" ? (
+                <div>
+                    <p className="text-muted text-xs font-bold uppercase tracking-wider mb-3">¿Qué querés exportar?</p>
+                    <div className="space-y-2 mb-5">
+                        {indicadores.map(ind => (
+                            <button
+                                key={ind.id}
+                                onClick={() => setSelected(ind.id)}
+                                className={cn(
+                                    "w-full flex items-center gap-3 p-3 rounded-xl border-2 transition-all text-left text-sm",
+                                    selected === ind.id
+                                        ? "border-accent bg-accent/10 text-foreground font-bold"
+                                        : "border-border bg-transparent text-muted hover:border-accent/40"
+                                )}
+                            >
+                                <span className="text-lg">{ind.label.split(" ")[0]}</span>
+                                <div>
+                                    <div className="font-semibold">{ind.label.split(" ").slice(1).join(" ")}</div>
+                                    <div className="text-[10px] text-muted">{ind.desc}</div>
+                                </div>
+                            </button>
+                        ))}
+                    </div>
+                    <button
+                        onClick={() => setStep("format")}
+                        className="w-full bg-accent text-white rounded-xl p-3.5 font-bold text-sm hover:scale-[1.02] transition-transform active:scale-[0.98] shadow-lg shadow-accent/20"
+                    >
+                        Continuar →
+                    </button>
+                </div>
             ) : (
-                <div className="space-y-3">
-                    {[
-                        { type: "PDF", label: "PDF Document", icon: "📄", desc: "Informe con gráficos", color: "hover:border-danger hover:bg-danger/5" },
-                        { type: "Excel", label: "Excel Sheet", icon: "📊", desc: "Todos los datos tabulados", color: "hover:border-success hover:bg-success/5" },
-                        { type: "CSV", label: "CSV Data", icon: "🗂️", desc: "Ideal para analítica propia", color: "hover:border-accent hover:bg-accent/5" }
-                    ].map(i => (
-                        <button
-                            key={i.type}
-                            onClick={() => handleExport(i.type)}
-                            className={cn(
-                                "w-full flex items-center gap-4 p-4 border border-border rounded-xl transition-all text-left",
-                                i.color
-                            )}
-                        >
-                            <span className="text-3xl">{i.icon}</span>
-                            <div>
-                                <div className="text-foreground font-bold text-sm">Exportar a {i.type}</div>
-                                <div className="text-muted text-[11px]">{i.desc}</div>
-                            </div>
-                        </button>
-                    ))}
+                <div>
+                    <button onClick={() => setStep("select")} className="text-muted text-xs font-bold uppercase tracking-wider mb-3 flex items-center gap-1 hover:text-foreground transition-colors">
+                        ← Volver · {indicadores.find(i => i.id === selected)?.label}
+                    </button>
+                    <p className="text-muted text-xs font-bold uppercase tracking-wider mb-3 mt-4">Elegí el formato</p>
+                    <div className="space-y-3">
+                        {[
+                            { type: "PDF", icon: "📄", desc: "Informe profesional con diseño premium", color: "hover:border-danger hover:bg-danger/5" },
+                            { type: "Excel", icon: "📊", desc: "Datos tabulados en múltiples hojas", color: "hover:border-success hover:bg-success/5" },
+                            { type: "CSV", icon: "🗂️", desc: "Ideal para Power BI o Google Sheets", color: "hover:border-accent hover:bg-accent/5" }
+                        ].map(i => (
+                            <button
+                                key={i.type}
+                                onClick={() => handleExport(i.type)}
+                                className={cn(
+                                    "w-full flex items-center gap-4 p-4 border border-border rounded-xl transition-all text-left",
+                                    i.color
+                                )}
+                            >
+                                <span className="text-3xl">{i.icon}</span>
+                                <div>
+                                    <div className="text-foreground font-bold text-sm">Exportar a {i.type}</div>
+                                    <div className="text-muted text-[11px]">{i.desc}</div>
+                                </div>
+                            </button>
+                        ))}
+                    </div>
                 </div>
             )}
         </div>
