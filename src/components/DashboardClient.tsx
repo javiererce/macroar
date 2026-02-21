@@ -842,7 +842,7 @@ const ResumenTab = ({ data }: DashboardProps) => (
                 <LineChart data={mockSalarios}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-color)" opacity={0.5} />
                     <XAxis dataKey="mes" tick={{ fill: "var(--muted)", fontSize: 10, fontWeight: 600 }} axisLine={false} tickLine={false} />
-                    <YAxis tick={{ fill: "var(--muted)", fontSize: 10 }} domain={[90, 240]} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fill: "var(--muted)", fontSize: 10 }} domain={[90, 150]} axisLine={false} tickLine={false} />
                     <Tooltip contentStyle={{ backgroundColor: "var(--card-secondary)", border: "1px solid var(--border-color)", borderRadius: "12px" }} />
                     <Legend iconType="circle" wrapperStyle={{ fontSize: "11px", paddingTop: "15px", fontWeight: "bold" }} />
                     <ReferenceLine y={100} stroke="var(--muted)" strokeDasharray="4 4" opacity={0.8} label={{ value: 'BASE', fill: 'var(--muted)', fontSize: 9, fontWeight: 900, position: 'right' }} />
@@ -1031,7 +1031,7 @@ const SalariosTab = () => (
             <div>
                 <h4 className="text-success font-black text-base mb-1 uppercase tracking-tighter">Monitor de Poder Adquisitivo</h4>
                 <p className="text-muted text-xs leading-relaxed max-w-3xl font-medium">
-                    Seguimiento del <strong className="text-foreground">Salario Real</strong>. El índice muestra la recuperación nominal frente a la desaceleración del IPC. Valores {'>'} 100 indican recomposición del nivel de vida base feb 2024.
+                    Seguimiento del <strong className="text-foreground">Salario Real</strong> basado en RIPTE (dic 2025: $1.633.547). El Índice de Salarios INDEC registró +1.6% mensual y +38.2% interanual en dic 2025. Valores {'>'} 100 indican recuperación real del poder adquisitivo (base feb 2025).
                 </p>
             </div>
         </div>
@@ -1042,7 +1042,7 @@ const SalariosTab = () => (
                     <LineChart data={mockSalarios}>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-color)" opacity={0.4} />
                         <XAxis dataKey="mes" tick={{ fill: "var(--muted)", fontSize: 11, fontWeight: 700 }} axisLine={false} />
-                        <YAxis tick={{ fill: "var(--muted)", fontSize: 10 }} domain={[90, 240]} axisLine={false} />
+                        <YAxis tick={{ fill: "var(--muted)", fontSize: 10 }} domain={[90, 150]} axisLine={false} />
                         <Tooltip />
                         <Legend wrapperStyle={{ fontSize: "11px", paddingTop: "15px", fontWeight: "bold" }} />
                         <ReferenceLine y={100} stroke="var(--muted)" strokeDasharray="5 5" label={{ value: 'BASE 100', fill: 'var(--muted)', fontSize: 10, fontWeight: 900, position: 'insideRight' }} />
@@ -1071,7 +1071,7 @@ const SalariosTab = () => (
 
 const NoticiasTab = () => {
     const [filter, setFilter] = useState("Todos");
-    const tags = ["Todos", "BCRA", "INDEC", "Mercados", "Fiscal", "Global"];
+    const tags = ["Todos", "BCRA", "Precios", "Mercados", "Fiscal", "Global"];
     const noticias = filter === "Todos" ? noticiasDefault : noticiasDefault.filter(n => n.tag === filter);
 
     return (
@@ -1090,37 +1090,48 @@ const NoticiasTab = () => {
                     </button>
                 ))}
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
                 {noticias.map((n, i) => (
                     <a
                         key={i}
                         href={n.link}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="bg-card border border-border rounded-2xl p-6 hover:border-accent/40 transition-all group cursor-pointer shadow-sm hover:shadow-xl hover:translate-y-[-4px] flex flex-col justify-between"
+                        className="bg-card border border-border rounded-2xl overflow-hidden hover:border-accent/40 transition-all group cursor-pointer shadow-sm hover:shadow-2xl hover:translate-y-[-4px] flex flex-col"
                     >
-                        <div>
-                            <div className="flex justify-between items-start mb-4">
-                                <div className="flex items-center gap-3">
-                                    <span className={cn(
-                                        "text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg shadow-sm font-mono",
-                                        n.tag === 'BCRA' ? 'bg-accent/10 text-accent' :
-                                            n.tag === 'Precios' ? 'bg-danger/10 text-danger' :
-                                                n.tag === 'Mercados' ? 'bg-success/10 text-success' :
-                                                    'bg-info/10 text-info'
-                                    )}>
-                                        {n.tag}
-                                    </span>
-                                    <span className="text-muted text-[10px] font-bold uppercase opacity-60">{n.fuente} · {n.tiempo}</span>
-                                </div>
+                        {/* Image */}
+                        <div className="relative w-full h-44 overflow-hidden">
+                            <img
+                                src={(n as any).imagen || "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=600&h=400&fit=crop"}
+                                alt={n.titulo}
+                                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                                loading="lazy"
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                            <span className={cn(
+                                "absolute top-3 left-3 text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg shadow-lg backdrop-blur-sm",
+                                n.tag === 'BCRA' ? 'bg-accent/80 text-white' :
+                                    n.tag === 'Precios' ? 'bg-danger/80 text-white' :
+                                        n.tag === 'Mercados' ? 'bg-success/80 text-white' :
+                                            n.tag === 'Fiscal' ? 'bg-info/80 text-white' :
+                                                'bg-warning/80 text-black'
+                            )}>
+                                {n.tag}
+                            </span>
+                            <div className="absolute bottom-3 left-3 right-3">
+                                <span className="text-white/60 text-[10px] font-bold uppercase">{n.fuente} · {n.tiempo}</span>
                             </div>
-                            <h4 className="text-foreground font-black text-sm leading-snug group-hover:text-accent transition-colors tracking-tight">
+                        </div>
+                        {/* Content */}
+                        <div className="p-4 flex-1 flex flex-col justify-between">
+                            <h4 className="text-foreground font-bold text-[13px] leading-snug group-hover:text-accent transition-colors tracking-tight line-clamp-3">
                                 {n.titulo}
                             </h4>
-                        </div>
-                        <div className="mt-6 flex justify-end">
-                            <div className="p-2 rounded-full group-hover:bg-accent/10 transition-colors">
-                                <ChevronRight size={18} className="text-muted group-hover:text-accent transition-all group-hover:translate-x-1" />
+                            <div className="mt-3 flex items-center justify-between">
+                                <span className="text-muted text-[10px] opacity-60">Leer nota completa</span>
+                                <div className="p-1.5 rounded-full group-hover:bg-accent/10 transition-colors">
+                                    <ChevronRight size={14} className="text-muted group-hover:text-accent transition-all group-hover:translate-x-1" />
+                                </div>
                             </div>
                         </div>
                     </a>
