@@ -9,7 +9,7 @@ import {
 import {
     Flame, DollarSign, Wallet, Landmark,
     TriangleAlert, Zap, Briefcase, TrendingUp,
-    Moon, Sun, Bell, Download, ChevronRight,
+    Moon, Sun, Bell, Download, ChevronRight, ChevronDown,
     Mail, Send, CheckCircle2, Loader2, X, Info,
     TrendingDown, Calendar, Search, Share2, Settings, MessageSquare,
     Github, Linkedin
@@ -668,16 +668,23 @@ export default function DashboardClient({ data }: DashboardProps) {
         }
     }, [dark]);
 
-    const tabs = [
+    const navItems = [
         { id: "resumen", label: "📊 Resumen" },
-        { id: "precios", label: "🔥 Inflación" },
-        { id: "cambiario", label: "💵 Cambio" },
-        { id: "externo", label: "🌍 Externo" },
-        { id: "cammesa", label: "⚡ CAMMESA" },
-        { id: "salarios", label: "💼 Salarios" },
+        {
+            id: "indicadores",
+            label: "📈 Indicadores",
+            children: [
+                { id: "precios", label: "🔥 Inflación" },
+                { id: "cambiario", label: "💵 Cambio" },
+                { id: "externo", label: "🌍 Externo" },
+                { id: "cammesa", label: "⚡ CAMMESA" },
+                { id: "salarios", label: "💼 Salarios" },
+            ]
+        },
         { id: "noticias", label: "📰 Noticias" },
         { id: "calendario", label: "📅 Calendario" },
         { id: "resumen_ia", label: "🤖 Resumen IA" },
+        { id: "simulador", label: "🔮 Simulador" },
     ];
 
     // Merge Real Data with KPIs
@@ -753,20 +760,60 @@ export default function DashboardClient({ data }: DashboardProps) {
             </header>
 
             {/* Tabs Navigation */}
-            <nav className="border-b border-border bg-card/40 backdrop-blur-md sticky top-[81px] z-40 overflow-x-auto no-scrollbar">
-                <div className="max-w-[1400px] mx-auto flex px-5">
-                    {tabs.map(t => (
-                        <button
-                            key={t.id}
-                            onClick={() => setTab(t.id)}
-                            className={cn(
-                                "px-6 py-4 text-xs font-black transition-all border-b-[3px] whitespace-nowrap uppercase tracking-widest",
-                                tab === t.id ? "text-accent border-accent bg-accent/5" : "text-muted border-transparent hover:text-foreground hover:bg-card/50"
-                            )}
-                        >
-                            {t.label}
-                        </button>
-                    ))}
+            <nav className="border-b border-border bg-card/40 backdrop-blur-md sticky top-[81px] z-40 overflow-visible">
+                <div className="max-w-[1400px] mx-auto flex flex-wrap px-2 sm:px-5">
+                    {navItems.map(t => {
+                        const isActive = t.children ? t.children.some(c => c.id === tab) : tab === t.id;
+
+                        if (t.children) {
+                            return (
+                                <div key={t.id} className="relative group flex-shrink-0">
+                                    <button
+                                        className={cn(
+                                            "flex items-center gap-1.5 px-4 sm:px-6 py-4 text-[11px] sm:text-xs font-black transition-all border-b-[3px] whitespace-nowrap uppercase tracking-widest outline-none focus:outline-none",
+                                            isActive ? "text-accent border-accent bg-accent/5" : "text-muted border-transparent hover:text-foreground hover:bg-card/50",
+                                            "group-hover:text-foreground group-focus-within:text-foreground group-hover:bg-card/50"
+                                        )}
+                                        aria-haspopup="menu"
+                                    >
+                                        {t.label}
+                                        <ChevronDown size={14} className="opacity-60 group-hover:opacity-100 transition-transform group-hover:rotate-180" />
+                                    </button>
+
+                                    {/* Dropdown flotante */}
+                                    <div className="absolute top-full left-0 hidden group-hover:block group-focus-within:block pt-1 z-[100] min-w-[210px]">
+                                        <div className="bg-[#111827] border border-[#1f2937] rounded-[10px] p-2 shadow-[0_20px_40px_rgba(0,0,0,0.5)] flex flex-col gap-1 transform-gpu">
+                                            {t.children.map(c => (
+                                                <button
+                                                    key={c.id}
+                                                    onClick={(e) => { e.currentTarget.blur(); setTab(c.id); }}
+                                                    className={cn(
+                                                        "text-left px-4 py-3 text-[11px] font-black tracking-widest uppercase transition-all rounded-lg",
+                                                        tab === c.id ? "text-accent bg-accent/10 shadow-inner" : "text-muted hover:text-foreground hover:bg-white/5"
+                                                    )}
+                                                >
+                                                    {c.label}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        }
+
+                        return (
+                            <button
+                                key={t.id}
+                                onClick={() => setTab(t.id)}
+                                className={cn(
+                                    "flex-shrink-0 px-4 sm:px-6 py-4 text-[11px] sm:text-xs font-black transition-all border-b-[3px] whitespace-nowrap uppercase tracking-widest",
+                                    isActive ? "text-accent border-accent bg-accent/5" : "text-muted border-transparent hover:text-foreground hover:bg-card/50"
+                                )}
+                            >
+                                {t.label}
+                            </button>
+                        );
+                    })}
                 </div>
             </nav>
 
@@ -814,6 +861,7 @@ export default function DashboardClient({ data }: DashboardProps) {
                             {tab === "noticias" && <NoticiasTab />}
                             {tab === "calendario" && <CalendarioTab />}
                             {tab === "resumen_ia" && <ResumenIaTab data={data} />}
+                            {tab === "simulador" && <SimuladorTab />}
                         </div>
                     )}
                 </div>
@@ -829,6 +877,18 @@ export default function DashboardClient({ data }: DashboardProps) {
 }
 
 // ── Tab Contents ──────────────────────────────────────────
+
+const SimuladorTab = () => (
+    <div className="bg-card border border-border/30 rounded-[32px] p-12 mt-6 shadow-xl flex flex-col items-center justify-center text-center max-w-2xl mx-auto animate-in fade-in zoom-in-95 duration-500">
+        <span className="text-7xl mb-6 block drop-shadow-lg">🔮</span>
+        <h2 className="text-3xl font-black font-serif text-foreground mb-4">Simulador Económico</h2>
+        <div className="bg-accent/10 text-accent px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-widest border border-accent/20 mb-6 shadow-sm">Próximamente</div>
+        <p className="text-muted text-[13px] leading-relaxed max-w-lg">
+            Esta nueva herramienta interactiva te permitirá proyectar distintos escenarios macroeconómicos alterando variables clave
+            (como el crawl, brecha o tasas) y visualizar el impacto sobre la macroeconomía argentina en tiempo real.
+        </p>
+    </div>
+);
 
 const ResumenTab = ({ data }: DashboardProps) => (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
