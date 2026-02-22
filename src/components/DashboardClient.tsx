@@ -677,6 +677,7 @@ export default function DashboardClient({ data }: DashboardProps) {
         { id: "salarios", label: "💼 Salarios" },
         { id: "noticias", label: "📰 Noticias" },
         { id: "calendario", label: "📅 Calendario" },
+        { id: "resumen_ia", label: "🤖 Resumen IA" },
     ];
 
     // Merge Real Data with KPIs
@@ -812,6 +813,7 @@ export default function DashboardClient({ data }: DashboardProps) {
                             {tab === "salarios" && <SalariosTab />}
                             {tab === "noticias" && <NoticiasTab />}
                             {tab === "calendario" && <CalendarioTab />}
+                            {tab === "resumen_ia" && <ResumenIaTab data={data} />}
                         </div>
                     )}
                 </div>
@@ -1262,3 +1264,178 @@ const CalendarioTab = () => (
         ))}
     </div>
 );
+
+// ── IA Tab ────────────────────────────────────────────────
+const PERFILES = [
+    { id: "cfo", label: "👔 CFO / Gerente Financiero", desc: "Foco en liquidez, costos y tipo de cambio" },
+    { id: "contador", label: "📋 Contador / Asesor", desc: "Foco en impuestos, ajuste por inflación y normativa" },
+    { id: "analista", label: "📊 Analista de Inversiones", desc: "Foco en activos, bonos y tendencias macro" },
+    { id: "pyme", label: "🏪 Dueño de PyME", desc: "Foco en costos, precios y poder adquisitivo" },
+];
+
+const ResumenIaTab = ({ data }: DashboardProps) => {
+    const [perfil, setPerfil] = useState<string | null>(null);
+    const [resumen, setResumen] = useState<string | null>(null);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const [copiado, setCopiado] = useState(false);
+
+    const generarResumen = async () => {
+        if (!perfil) return;
+        setLoading(true);
+        setResumen(null);
+        setError(null);
+
+        const perfilData = PERFILES.find(p => p.id === perfil);
+        const fecha = new Date().toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+
+        const currentData = {
+            inflacion: data.inflacion.length ? `${data.inflacion[data.inflacion.length - 1].valor}%` : "N/A",
+            dolarOficial: `$${data.dolares.oficial}`,
+            dolarBlue: `$${data.dolares.blue}`,
+            reservas: data.reservas.length ? `USD ${data.reservas[data.reservas.length - 1].valor}B` : "N/A",
+            riesgoPais: `${data.riesgoPais.actual} pb`,
+            tasaBadlar: `${data.tasaBadlar}%`
+        };
+
+        const prompt = `Sos un analista económico senior especializado en Argentina. Tu tarea es generar un RESUMEN EJECUTIVO diario conciso y accionable para un ${perfilData?.label}.
+
+FECHA: ${fecha}
+
+DATOS ECONÓMICOS ACTUALES DE ARGENTINA:
+- Inflación mensual: ${currentData.inflacion}
+- Dólar Oficial BNA: ${currentData.dolarOficial}
+- Dólar Blue: ${currentData.dolarBlue}
+- Reservas BCRA: ${currentData.reservas}
+- Riesgo País EMBI+: ${currentData.riesgoPais}
+- Tasa BADLAR: ${currentData.tasaBadlar}
+
+PERFIL DEL LECTOR: ${perfilData?.label} — ${perfilData?.desc}
+
+INSTRUCCIONES:
+1. Escribí en español argentino, tono profesional pero accesible
+2. Máximo 200 palabras en total
+3. Estructurá la respuesta en exactamente 3 secciones con estos títulos exactos:
+   **📌 Situación actual**
+   **⚠️ Puntos de atención**
+   **✅ Recomendación práctica**
+4. Cada sección: 2-3 oraciones máximo
+5. Sé específico con los números, no uses frases vacías
+6. La recomendación debe ser concreta y accionable para el perfil indicado
+7. No uses bullet points dentro de las secciones, solo párrafos`;
+
+        try {
+            const response = await fetch("/api/resumen", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ prompt }),
+            });
+            const resultData = await response.json();
+            if (!response.ok) throw new Error(resultData.error || "Error al generar resumen");
+
+            setResumen(resultData.content);
+        } catch (e: any) {
+            setError(e.message || "No se pudo generar el resumen. Intentá de nuevo.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const copiar = () => {
+        if (!resumen) return;
+        navigator.clipboard.writeText(resumen);
+        setCopiado(true);
+        setTimeout(() => setCopiado(false), 2000);
+    };
+
+    const parsearResumen = (texto: string) => {
+        if (!texto) return [];
+        const secciones = [];
+        const partes = texto.split(/\*\*([^*]+)\*\*/g);
+        for (let i = 1; i < partes.length; i += 2) {
+            secciones.push({ titulo: partes[i], contenido: partes[i + 1]?.trim() ?? "" });
+        }
+        return secciones;
+    };
+
+    const secciones = parsearResumen(resumen || "");
+    const seccionColors: Record<string, string> = { "📌 Situación actual": "var(--accent)", "⚠️ Puntos de atención": "var(--yellow)", "✅ Recomendación práctica": "var(--green)" };
+
+    return (
+        <div className="space-y-6">
+            <div className="flex items-center gap-4 mb-6">
+                <span className="text-4xl filter drop-shadow-md">🤖</span>
+                <div>
+                    <div className="font-serif font-black text-2xl tracking-tight mb-1 text-foreground">Resumen IA Ejecutivo</div>
+                    <div className="text-muted text-xs font-bold uppercase tracking-widest opacity-70">
+                        {new Date().toLocaleDateString("es-AR", { day: "numeric", month: "long", year: "numeric" })}
+                    </div>
+                </div>
+                <div className="ml-auto bg-purple-500/10 text-purple-400 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border border-purple-500/20 shadow-sm">
+                    ✨ Powered by Claude
+                </div>
+            </div>
+
+            <div className="bg-card border border-border/30 rounded-[32px] p-6 mb-4 shadow-xl">
+                <div className="text-muted text-[10px] font-black uppercase tracking-widest mb-4">¿Para quién es el resumen?</div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {PERFILES.map(p => (
+                        <div key={p.id} onClick={() => setPerfil(p.id)} className={cn(
+                            "p-4 rounded-2xl cursor-pointer transition-all border-2",
+                            perfil === p.id ? "bg-accent/10 border-accent shadow-lg shadow-accent/10" : "bg-card-secondary border-transparent hover:border-border/40"
+                        )}>
+                            <div className="text-foreground font-bold text-sm mb-1">{p.label}</div>
+                            <div className="text-muted text-[11px]">{p.desc}</div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            <button onClick={generarResumen} disabled={!perfil || loading}
+                className={cn(
+                    "w-full p-4 rounded-2xl font-black text-sm uppercase tracking-wider transition-all flex items-center justify-center gap-2",
+                    perfil && !loading ? "bg-gradient-to-r from-accent to-[#BF537B] text-white hover:scale-[1.02] active:scale-[0.98] cursor-pointer shadow-xl shadow-accent/20" : "bg-card text-muted border border-border/30 cursor-not-allowed opacity-50"
+                )}>
+                {loading ? <><Loader2 size={18} className="animate-spin" /> Analizando Indicadores...</> : "✨ Generar Resumen"}
+            </button>
+
+            {error && (
+                <div className="bg-danger/10 border border-danger/30 rounded-2xl p-4 text-danger text-sm font-bold shadow-lg text-center">
+                    {error}
+                </div>
+            )}
+
+            {resumen && !loading && (
+                <div className="bg-card border border-border/30 rounded-[32px] overflow-hidden shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    <div className="bg-gradient-to-r from-accent/10 to-purple-600/10 p-5 border-b border-border/30 flex justify-between items-center flex-wrap gap-4">
+                        <div>
+                            <div className="text-foreground font-black text-sm tracking-tight">Resumen para {PERFILES.find(p => p.id === perfil)?.label}</div>
+                            <div className="text-muted text-[10px] uppercase font-bold tracking-widest mt-1">
+                                {new Date().toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })}
+                            </div>
+                        </div>
+                        <div className="flex gap-2">
+                            <button onClick={copiar} className="bg-card-secondary/80 text-foreground border border-border/40 rounded-xl px-4 py-2 text-[10px] font-black uppercase tracking-widest hover:border-accent/50 hover:bg-card-secondary transition-all">
+                                {copiado ? "✅ Copiado" : "📋 Copiar"}
+                            </button>
+                            <button onClick={generarResumen} className="bg-accent/10 text-accent border border-accent/20 rounded-xl px-4 py-2 text-[10px] font-black uppercase tracking-widest hover:bg-accent/20 transition-all">
+                                🔄 Regenerar
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="p-6 flex flex-col gap-6">
+                        {secciones.length > 0 ? secciones.map((s, i) => (
+                            <div key={i} className="pl-4 border-l-4" style={{ borderColor: seccionColors[s.titulo] || "var(--accent)" }}>
+                                <div className="font-bold text-sm mb-2" style={{ color: seccionColors[s.titulo] || "var(--accent)" }}>{s.titulo}</div>
+                                <p className="text-foreground/90 text-[13px] leading-relaxed font-medium">{s.contenido}</p>
+                            </div>
+                        )) : (
+                            <p className="text-foreground/90 text-sm leading-relaxed">{resumen}</p>
+                        )}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
