@@ -56,6 +56,66 @@ const Skel = ({ className }: { className?: string }) => (
     <div className={cn("bg-subtle animate-pulse rounded", className)} />
 );
 
+// ─── HOOK: FETCH CON RETRY ────────────────────────────────────────────────────
+const useFetch = (url: string, transform: any, fallback: any) => {
+    const [data, setData] = useState<any>(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(false);
+    const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+
+    const fetch_ = useCallback(async () => {
+        setLoading(true);
+        setError(false);
+        try {
+            const res = await fetch(url, { cache: "no-store" });
+            if (!res.ok) throw new Error();
+            const json = await res.json();
+            setData(transform ? transform(json) : json);
+            setLastUpdated(new Date());
+            setError(false);
+        } catch {
+            setData(fallback ?? null);
+            setError(true);
+        }
+        setLoading(false);
+    }, [url, transform, fallback]);
+
+    useEffect(() => {
+        fetch_();
+        const interval = setInterval(fetch_, 5 * 60 * 1000);
+        return () => clearInterval(interval);
+    }, [fetch_]);
+
+    return { data, loading, error, lastUpdated, refresh: fetch_ };
+};
+
+const StatusBadge = ({ loading, error, lastUpdated, onRefresh }: any) => {
+    const [now, setNow] = useState(Date.now());
+    useEffect(() => { const t = setInterval(() => setNow(Date.now()), 30000); return () => clearInterval(t); }, []);
+
+    const secsAgo = lastUpdated ? Math.floor((now - lastUpdated.getTime()) / 1000) : null;
+    const label = loading ? "Actualizando..." :
+        error ? "⚠️ Sin conexión — datos estimados" :
+            secsAgo !== null ? (secsAgo < 60 ? `Hace ${secsAgo}s` : `Hace ${Math.floor(secsAgo / 60)}min`) : "";
+
+    return (
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <div style={{
+                width: 7, height: 7, borderRadius: "50%",
+                background: loading ? "var(--yellow)" : error ? "var(--red)" : "var(--green)",
+                boxShadow: `0 0 6px ${loading ? "var(--yellow)" : error ? "var(--red)" : "var(--green)"}`,
+                animation: loading ? "pulse 1s infinite" : "none",
+            }} />
+            <span style={{ fontSize: 10, color: error ? "var(--red)" : "var(--muted)" }}>{label}</span>
+            <button onClick={onRefresh} style={{
+                background: "none", border: `1px solid var(--border-color)`, borderRadius: 6,
+                color: "var(--muted)", fontSize: 10, padding: "2px 8px", cursor: "pointer",
+            }}>↻ Actualizar</button>
+            <style>{`@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }`}</style>
+        </div>
+    );
+};
+
 const InfoTip = ({ text }: { text: string }) => {
     const [show, setShow] = useState(false);
     return (
@@ -876,7 +936,7 @@ export default function DashboardClient({ data }: DashboardProps) {
                             {tab === "noticias" && <NoticiasTab />}
                             {tab === "calendario" && <CalendarioTab />}
                             {tab === "resumen_ia" && <ResumenIaTab data={data} />}
-                            {tab === "crypto" && <CryptoTab />}
+                            {tab === "crypto" && <CryptoTab data={data} />}
                             {tab === "simulador" && <SimuladorTab />}
                         </div>
                     )}
@@ -1512,9 +1572,6 @@ const C_CRYPTO = {
     purple: "var(--purple)", orange: "var(--orange)", text: "var(--text)", muted: "var(--muted)",
     bitcoin: "#f7931a", ethereum: "#627eea", usdt: "#26a17b",
 };
-
-const BTC_USD = 97800;
-const ETH_USD = 3420;
 const DOLAR_BLUE = 1220;
 const DOLAR_OFICIAL = 1063;
 const INFLACION_ANUAL = 66;
@@ -1546,14 +1603,29 @@ const mockStables = [
 
 const mockFear = 72; // 0-100, >60 = greed, <40 = fear
 
-const cryptos = [
-    { id: "btc", nombre: "Bitcoin", simbolo: "BTC", precio: BTC_USD, precioARS: BTC_USD * DOLAR_BLUE, var24h: 2.4, var7d: 8.1, mcap: "1.93T", color: C_CRYPTO.bitcoin, icon: "₿" },
-    { id: "eth", nombre: "Ethereum", simbolo: "ETH", precio: ETH_USD, precioARS: ETH_USD * DOLAR_BLUE, var24h: -1.2, var7d: 4.3, mcap: "411B", color: C_CRYPTO.ethereum, icon: "Ξ" },
-    { id: "usdt", nombre: "Tether", simbolo: "USDT", precio: 1.00, precioARS: DOLAR_BLUE, var24h: 0.0, var7d: 0.0, mcap: "140B", color: C_CRYPTO.usdt, icon: "₮" },
-    { id: "bnb", nombre: "BNB", simbolo: "BNB", precio: 695, precioARS: 695 * DOLAR_BLUE, var24h: 1.8, var7d: -2.1, mcap: "101B", color: C_CRYPTO.yellow, icon: "B" },
-    { id: "sol", nombre: "Solana", simbolo: "SOL", precio: 228, precioARS: 228 * DOLAR_BLUE, var24h: 3.2, var7d: 12.4, mcap: "108B", color: C_CRYPTO.purple, icon: "◎" },
-    { id: "xrp", nombre: "XRP", simbolo: "XRP", precio: 2.48, precioARS: 2.48 * DOLAR_BLUE, var24h: -0.8, var7d: 5.6, mcap: "142B", color: C_CRYPTO.accent, icon: "✕" },
+const fallbackCryptos = [
+    { id: "bitcoin", nombre: "Bitcoin", simbolo: "BTC", precio: 97800, var24h: 2.4, var7d: 8.1, mcap: "1.93T", color: C_CRYPTO.bitcoin, icon: "₿" },
+    { id: "ethereum", nombre: "Ethereum", simbolo: "ETH", precio: 3420, var24h: -1.2, var7d: 4.3, mcap: "411B", color: C_CRYPTO.ethereum, icon: "Ξ" },
+    { id: "tether", nombre: "Tether", simbolo: "USDT", precio: 1.00, var24h: 0.0, var7d: 0.0, mcap: "140B", color: C_CRYPTO.usdt, icon: "₮" },
+    { id: "binancecoin", nombre: "BNB", simbolo: "BNB", precio: 695, var24h: 1.8, var7d: -2.1, mcap: "101B", color: C_CRYPTO.yellow, icon: "B" },
+    { id: "solana", nombre: "Solana", simbolo: "SOL", precio: 228, var24h: 3.2, var7d: 12.4, mcap: "108B", color: C_CRYPTO.purple, icon: "◎" },
+    { id: "ripple", nombre: "XRP", simbolo: "XRP", precio: 2.48, var24h: -0.8, var7d: 5.6, mcap: "142B", color: C_CRYPTO.accent, icon: "✕" },
 ];
+
+const transformCrypto = (data: any[]) => {
+    if (!Array.isArray(data)) return fallbackCryptos;
+    return data.map(coin => ({
+        id: coin.id,
+        nombre: coin.name,
+        simbolo: coin.symbol.toUpperCase(),
+        precio: coin.current_price,
+        var24h: coin.price_change_percentage_24h_in_currency || 0,
+        var7d: coin.price_change_percentage_7d_in_currency || 0,
+        mcap: coin.market_cap >= 1e12 ? `${(coin.market_cap / 1e12).toFixed(2)}T` : (coin.market_cap >= 1e9 ? `${(coin.market_cap / 1e9).toFixed(0)}B` : `${(coin.market_cap / 1e6).toFixed(0)}M`),
+        color: coin.symbol === 'btc' ? '#f7931a' : coin.symbol === 'eth' ? '#627eea' : coin.symbol === 'usdt' ? '#26a17b' : 'var(--accent)',
+        icon: coin.symbol === 'btc' ? '₿' : coin.symbol === 'eth' ? 'Ξ' : coin.symbol === 'usdt' ? '₮' : '•'
+    }));
+};
 
 const fmtARS = (n: number) => {
     if (n >= 1000000) return `$${(n / 1000000).toFixed(2)}M`;
@@ -1570,17 +1642,19 @@ const fmtUSD = (n: number) => {
 
 const tt_crypto = { backgroundColor: "var(--card-secondary)", border: "1px solid var(--border-color)", borderRadius: 8, color: "var(--text)", fontSize: 12 };
 
-const Calculadora = () => {
-    const [monto, setMonto] = useState("100000");
+const Calculadora = ({ cryptos, blue }: { cryptos: any[], blue: number }) => {
+    const [crypto, setCrypto] = useState("bitcoin");
+    const [monto, setMonto] = useState("1000000");
     const [moneda, setMoneda] = useState("ARS");
-    const [crypto, setCrypto] = useState("btc");
-    const c = cryptos.find(x => x.id === crypto)!;
-    const montoNum = parseFloat(monto.replace(/\./g, "").replace(",", ".")) || 0;
+
+    const montoNum = parseFloat(monto) || 0;
+    const c = cryptos.find(x => x.id === crypto) || cryptos[0];
+    const precioARS = c.precio * blue;
 
     const calcular = () => {
-        if (moneda === "ARS") return { cantidad: montoNum / c.precioARS, unidad: c.simbolo };
-        if (moneda === "USD") return { cantidad: (montoNum * DOLAR_BLUE) / c.precioARS, unidad: c.simbolo };
-        return { cantidad: montoNum / c.precio, unidad: c.simbolo };
+        if (moneda === "ARS") return { cantidad: montoNum / precioARS, unidad: c.simbolo };
+        if (moneda === "USD") return { cantidad: montoNum / c.precio, unidad: c.simbolo };
+        return { cantidad: 0, unidad: c.simbolo };
     };
 
     const resultado = calcular();
@@ -1616,19 +1690,30 @@ const Calculadora = () => {
                     {resultado.cantidad < 0.001 ? resultado.cantidad.toFixed(8) : resultado.cantidad.toFixed(6)} {resultado.unidad}
                 </div>
                 <div style={{ color: C_CRYPTO.muted, fontSize: 11, fontWeight: "bold" }}>
-                    1 {c.simbolo} = {fmtARS(c.precioARS)} ARS · USD {fmtUSD(c.precio)}
+                    1 {c.simbolo} = {fmtARS(precioARS)} ARS · USD {fmtUSD(c.precio)}
                 </div>
             </div>
         </div>
     );
 };
 
-const CryptoTab = () => {
+const CryptoTab = ({ data }: { data: DashboardData }) => {
+    const blue = data.dolares.blue;
     const [tab, setTab] = useState("precios");
-    const [loading, setLoading] = useState(true);
     const [monedaVista, setMonedaVista] = useState("USD");
 
-    useEffect(() => { setTimeout(() => setLoading(false), 800); }, []);
+    const coinsPool = useFetch(
+        "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=bitcoin,ethereum,tether,binancecoin,solana,ripple&order=market_cap_desc&per_page=100&page=1&sparkline=false&price_change_percentage=24h,7d",
+        transformCrypto,
+        fallbackCryptos
+    );
+
+    const fng = useFetch("https://api.alternative.me/fng/", (d: any) => d.data[0], { value: "50", value_classification: "Neutral" });
+
+    const cryptos = coinsPool.data || fallbackCryptos;
+    const mockFearValue = parseInt(fng.data?.value || "50");
+    const fearLabel = fng.data?.value_classification || "Neutral";
+    const fearColor = mockFearValue >= 60 ? C_CRYPTO.green : mockFearValue >= 40 ? C_CRYPTO.yellow : C_CRYPTO.red;
 
     const tabs = [
         { id: "precios", label: "💹 Precios" },
@@ -1636,9 +1721,6 @@ const CryptoTab = () => {
         { id: "stables", label: "💲 Stables" },
         { id: "calculadora", label: "🧮 Calculadora" },
     ];
-
-    const fearColor = mockFear >= 60 ? C_CRYPTO.green : mockFear >= 40 ? C_CRYPTO.yellow : C_CRYPTO.red;
-    const fearLabel = mockFear >= 60 ? "Codicia" : mockFear >= 40 ? "Neutral" : "Miedo";
 
     return (
         <div style={{ background: C_CRYPTO.bg, fontFamily: "system-ui,-apple-system,sans-serif", color: C_CRYPTO.text, padding: "0" }}>
@@ -1648,25 +1730,25 @@ const CryptoTab = () => {
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                     <span style={{ fontSize: 26 }} className="drop-shadow-lg">🇦🇷</span>
                     <div>
-                        <div style={{ fontWeight: 900, fontSize: 20, letterSpacing: "-0.05em" }}>MacroAR — Crypto</div>
-                        <div style={{ color: C_CRYPTO.muted, fontSize: 11, fontWeight: "bold", textTransform: "uppercase", letterSpacing: "1px" }}>Mercado cripto en contexto argentino</div>
+                        <div style={{ fontWeight: 800, fontSize: 17 }}>MacroAR — Crypto</div>
+                        <div style={{ color: C_CRYPTO.muted, fontSize: 11 }}>Mercado cripto en contexto argentino</div>
                     </div>
                 </div>
-                <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-                    {/* Fear & Greed */}
-                    <div style={{ background: C_CRYPTO.card, border: `1px solid ${C_CRYPTO.border}`, borderRadius: 10, padding: "8px 14px", display: "flex", alignItems: "center", gap: 10 }}>
+
+                <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                    <StatusBadge loading={coinsPool.loading} error={coinsPool.error} lastUpdated={coinsPool.lastUpdated} onRefresh={coinsPool.refresh} />
+
+                    <div style={{ background: C_CRYPTO.card, border: `1px solid ${C_CRYPTO.border}`, borderRadius: "14px", padding: "8px 14px", display: "flex", alignItems: "center", gap: 12 }} className="shadow-lg">
                         <div>
-                            <div style={{ color: C_CRYPTO.muted, fontSize: 10, textTransform: "uppercase", fontWeight: "bold", letterSpacing: 1 }}>Fear & Greed</div>
-                            <div style={{ color: fearColor, fontWeight: 800, fontSize: 18 }}>{mockFear} <span style={{ fontSize: 12 }}>{fearLabel}</span></div>
+                            <div style={{ color: C_CRYPTO.muted, fontSize: 9, fontWeight: 800, textTransform: "uppercase", letterSpacing: "1px" }}>Fear & Greed</div>
+                            <div style={{ color: fearColor, fontSize: 13, fontWeight: 800 }}>{mockFearValue} <span style={{ fontSize: 11 }}>{fearLabel}</span></div>
                         </div>
-                        <div style={{ width: 40, height: 40, borderRadius: "50%", background: `conic-gradient(${fearColor} ${mockFear * 3.6}deg, ${C_CRYPTO.border} 0deg)`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                            <div style={{ width: 28, height: 28, borderRadius: "50%", background: C_CRYPTO.card, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: fearColor, fontWeight: 700 }}>{mockFear}</div>
-                        </div>
+                        <div style={{ width: 34, height: 34, borderRadius: "50%", border: `3px solid ${fearColor}30`, borderTopColor: fearColor, transform: `rotate(${(mockFearValue / 100) * 360}deg)` }} />
                     </div>
-                    {/* Dólar ref */}
-                    <div style={{ background: C_CRYPTO.card, border: `1px solid ${C_CRYPTO.border}`, borderRadius: 10, padding: "8px 14px" }}>
-                        <div style={{ color: C_CRYPTO.muted, fontSize: 10, marginBottom: 2, fontWeight: "bold", textTransform: "uppercase", letterSpacing: "1px" }}>💵 Blue referencia</div>
-                        <div style={{ color: C_CRYPTO.yellow, fontWeight: 700, fontSize: 15 }}>${DOLAR_BLUE.toLocaleString("es-AR")}</div>
+
+                    <div style={{ background: C_CRYPTO.card, border: `1px solid ${C_CRYPTO.border}`, borderRadius: "14px", padding: "8px 14px" }} className="shadow-lg">
+                        <div style={{ color: C_CRYPTO.muted, fontSize: 9, fontWeight: 800, textTransform: "uppercase", letterSpacing: "1px" }}>💵 Blue Referencia</div>
+                        <div style={{ color: C_CRYPTO.yellow, fontSize: 15, fontWeight: 800 }}>${blue?.toLocaleString("es-AR")}</div>
                     </div>
                     {/* Toggle moneda */}
                     <div style={{ background: C_CRYPTO.card, border: `1px solid ${C_CRYPTO.border}`, borderRadius: 10, display: "flex", overflow: "hidden" }}>
@@ -1678,17 +1760,15 @@ const CryptoTab = () => {
             </div>
 
             {/* KPIs rápidos */}
-            <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 16 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 14, marginBottom: 20 }}>
                 {cryptos.slice(0, 4).map(c => (
-                    <div key={c.id} style={{ background: C_CRYPTO.card, border: `1px solid ${C_CRYPTO.border}`, borderLeft: `3px solid ${c.color}`, borderRadius: "12px", padding: "10px 14px", flex: "1 1 130px" }} className="shadow-lg">
-                        <div style={{ color: C_CRYPTO.muted, fontSize: 10, marginBottom: 2, fontWeight: "bold" }}>{c.icon} {c.simbolo}</div>
-                        <div style={{ color: C_CRYPTO.text, fontWeight: 700, fontSize: 16 }}>
-                            {monedaVista === "ARS" ? fmtARS(c.precioARS) : fmtUSD(c.precio)}
+                    <div key={c.id} style={{ background: C_CRYPTO.card, border: `1px solid ${C_CRYPTO.border}`, borderLeft: `4px solid ${c.color}`, borderRadius: "18px", padding: "1.25rem", transition: "transform 0.2s" }} className="group hover:scale-[1.03] shadow-lg">
+                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+                            <span style={{ color: C_CRYPTO.muted, fontSize: 11, fontWeight: 700 }}>{c.icon} {c.simbolo}</span>
+                            <span style={{ color: c.var24h >= 0 ? C_CRYPTO.green : C_CRYPTO.red, fontSize: 11, fontWeight: 800 }}>{c.var24h >= 0 ? "▲" : "▼"} {Math.abs(c.var24h).toFixed(1)}%</span>
                         </div>
-                        <div style={{ display: "flex", gap: 8, marginTop: 2 }}>
-                            <span style={{ color: c.var24h >= 0 ? C_CRYPTO.green : C_CRYPTO.red, fontSize: 11, fontWeight: 800 }}>
-                                {c.var24h >= 0 ? "▲" : "▼"} {Math.abs(c.var24h)}% 24h
-                            </span>
+                        <div style={{ color: C_CRYPTO.text, fontSize: 22, fontWeight: 800 }}>
+                            {monedaVista === "ARS" ? fmtARS(c.precio * blue) : fmtUSD(c.precio)}
                         </div>
                     </div>
                 ))}
@@ -1706,7 +1786,7 @@ const CryptoTab = () => {
                 ))}
             </div>
 
-            {loading ? (
+            {coinsPool.loading ? (
                 <div style={{ textAlign: "center", padding: "3rem" }}>
                     <Loader2 size={48} className="text-accent animate-spin mx-auto mb-4" />
                 </div>
@@ -1745,7 +1825,7 @@ const CryptoTab = () => {
                                                         </div>
                                                     </td>
                                                     <td style={{ padding: "16px 20px", color: C_CRYPTO.text, fontWeight: 700, fontSize: 14 }}>{fmtUSD(c.precio)}</td>
-                                                    <td style={{ padding: "16px 20px", color: C_CRYPTO.yellow, fontWeight: 700, fontSize: 14 }}>{fmtARS(c.precioARS)}</td>
+                                                    <td style={{ padding: "16px 20px", color: C_CRYPTO.yellow, fontWeight: 700, fontSize: 14 }}>{fmtARS(c.precio * blue)}</td>
                                                     <td style={{ padding: "16px 20px" }}>
                                                         <span style={{ color: c.var24h >= 0 ? C_CRYPTO.green : C_CRYPTO.red, fontWeight: 800, fontSize: 13 }}>{c.var24h >= 0 ? "▲" : "▼"} {Math.abs(c.var24h).toFixed(1)}%</span>
                                                     </td>
@@ -1831,7 +1911,7 @@ const CryptoTab = () => {
                         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
                             <div style={{ background: `${C_CRYPTO.usdt}11`, border: `1px solid ${C_CRYPTO.usdt}33`, borderRadius: "16px", padding: "16px 20px" }}>
                                 <p style={{ color: C_CRYPTO.muted, fontSize: 13, margin: 0, lineHeight: 1.6, fontWeight: "500" }}>
-                                    💲 Las stablecoins en Argentina son una alternativa al dólar blue. Compará precios y descubrí dónde conviene operar. <strong style={{ color: C_CRYPTO.text }}>Dólar Blue Ref: ${DOLAR_BLUE}</strong>
+                                    💲 Las stablecoins en Argentina son una alternativa al dólar blue. Compará precios y descubrí dónde conviene operar. <strong style={{ color: C_CRYPTO.text }}>Dólar Blue Ref: ${blue}</strong>
                                 </p>
                             </div>
                             <div style={{ background: C_CRYPTO.card, border: `1px solid ${C_CRYPTO.border}`, borderRadius: "24px", overflow: "hidden" }} className="shadow-xl">
@@ -1849,8 +1929,8 @@ const CryptoTab = () => {
                                         </div>
                                         <div style={{ display: "flex", gap: 24, alignItems: "center" }}>
                                             <div style={{ textAlign: "right" }}>
-                                                <div style={{ color: C_CRYPTO.text, fontWeight: 800, fontSize: 16 }}>${s.precioARS.toLocaleString("es-AR")}</div>
-                                                <div style={{ color: C_CRYPTO.muted, fontSize: 11, fontWeight: "bold" }}>ARS / USDT</div>
+                                                <div style={{ color: C_CRYPTO.text, fontWeight: 800, fontSize: 16 }}>${(s.nombre === 'USDT' ? (blue * 0.98) : (blue * 0.97)).toLocaleString("es-AR")}</div>
+                                                <div style={{ color: C_CRYPTO.muted, fontSize: 11, fontWeight: "bold" }}>ARS / {s.nombre}</div>
                                             </div>
                                             <div style={{ textAlign: "right", minWidth: 60 }}>
                                                 <div style={{ color: s.vsBlue >= 0 ? C_CRYPTO.green : C_CRYPTO.red, fontWeight: 800, fontSize: 15 }}>
@@ -1888,15 +1968,15 @@ const CryptoTab = () => {
                     {/* CALCULADORA */}
                     {tab === "calculadora" && (
                         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-                            <Calculadora />
+                            <Calculadora cryptos={cryptos} blue={blue} />
                             {/* Contexto macro */}
                             <div style={{ background: C_CRYPTO.card, border: `1px solid ${C_CRYPTO.border}`, borderRadius: "24px", padding: "1.5rem" }} className="shadow-xl">
                                 <h3 style={{ color: C_CRYPTO.text, fontSize: 14, fontWeight: 800, marginBottom: 16, textTransform: "uppercase", letterSpacing: "1px" }}>📊 Contexto macro para decisiones</h3>
                                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 14 }}>
                                     {[
-                                        { label: "1 BTC en pesos", val: fmtARS(BTC_USD * DOLAR_BLUE), color: C_CRYPTO.bitcoin },
-                                        { label: "1 ETH en pesos", val: fmtARS(ETH_USD * DOLAR_BLUE), color: C_CRYPTO.ethereum },
-                                        { label: "Sueldo mín. / BTC", val: `${((280000) / (BTC_USD * DOLAR_BLUE) * 100).toFixed(4)}%`, color: C_CRYPTO.accent },
+                                        { label: "1 BTC en pesos", val: fmtARS(cryptos[0].precio * blue), color: C_CRYPTO.bitcoin },
+                                        { label: "1 ETH en pesos", val: fmtARS(cryptos[1].precio * blue), color: C_CRYPTO.ethereum },
+                                        { label: "Sueldo mín. / BTC", val: `${((280000) / (cryptos[0].precio * blue) * 100).toFixed(4)}%`, color: C_CRYPTO.accent },
                                         { label: "Inflación anual est.", val: `${INFLACION_ANUAL}%`, color: C_CRYPTO.red },
                                     ].map(k => (
                                         <div key={k.label} style={{ background: C_CRYPTO.card2, borderRadius: "12px", padding: "12px 16px", borderLeft: `4px solid ${k.color}` }}>
@@ -1909,7 +1989,8 @@ const CryptoTab = () => {
                         </div>
                     )}
                 </div>
-            )}
+            )
+            }
 
             <div style={{ marginTop: 24, padding: "10px 16px", background: C_CRYPTO.card, borderRadius: "12px", border: `1px solid ${C_CRYPTO.border}`, fontSize: 11, color: C_CRYPTO.muted, display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 10, fontWeight: "bold" }}>
                 <span>📡 Feed: CoinGecko API · Binance · argentinadatos.com</span>
@@ -1940,66 +2021,8 @@ const FALLBACK = {
     riesgoPais: 724,
 };
 
-// ─── HOOK: FETCH CON RETRY ────────────────────────────────────────────────────
-const useFetch = (url: string, transform: any, fallback: any) => {
-    const [data, setData] = useState<any>(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(false);
-    const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
-    const fetch_ = useCallback(async () => {
-        setLoading(true);
-        setError(false);
-        try {
-            const res = await fetch(url, { cache: "no-store" });
-            if (!res.ok) throw new Error();
-            const json = await res.json();
-            setData(transform ? transform(json) : json);
-            setLastUpdated(new Date());
-            setError(false);
-        } catch {
-            setData(fallback ?? null);
-            setError(true);
-        }
-        setLoading(false);
-    }, [url, transform, fallback]);
-
-    useEffect(() => {
-        fetch_();
-        const interval = setInterval(fetch_, 3 * 60 * 1000); // 3 minutes
-        return () => clearInterval(interval);
-    }, [fetch_]);
-
-    return { data, loading, error, lastUpdated, refresh: fetch_ };
-};
-
-// ─── BADGE DE ESTADO ─────────────────────────────────────────────────────────
-const StatusBadge = ({ loading, error, lastUpdated, onRefresh }: any) => {
-    const [now, setNow] = useState(Date.now());
-    useEffect(() => { const t = setInterval(() => setNow(Date.now()), 30000); return () => clearInterval(t); }, []);
-
-    const secsAgo = lastUpdated ? Math.floor((now - lastUpdated.getTime()) / 1000) : null;
-    const label = loading ? "Actualizando..." :
-        error ? "⚠️ Sin conexión — datos estimados" :
-            secsAgo !== null ? (secsAgo < 60 ? `Hace ${secsAgo}s` : `Hace ${Math.floor(secsAgo / 60)}min`) : "";
-
-    return (
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <div style={{
-                width: 7, height: 7, borderRadius: "50%",
-                background: loading ? C_SIMULADOR.yellow : error ? C_SIMULADOR.red : C_SIMULADOR.green,
-                boxShadow: `0 0 6px ${loading ? C_SIMULADOR.yellow : error ? C_SIMULADOR.red : C_SIMULADOR.green}`,
-                animation: loading ? "pulse 1s infinite" : "none",
-            }} />
-            <span style={{ fontSize: 10, color: error ? C_SIMULADOR.red : C_SIMULADOR.muted }}>{label}</span>
-            <button onClick={onRefresh} style={{
-                background: "none", border: `1px solid ${C_SIMULADOR.border}`, borderRadius: 6,
-                color: C_SIMULADOR.muted, fontSize: 10, padding: "2px 8px", cursor: "pointer",
-            }}>↻ Actualizar</button>
-            <style>{`@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }`}</style>
-        </div>
-    );
-};
+// ─── BADGE DE ESTADO SE QUITA DE AQUÍ PORQUE SE MOVIÓ ARRIBA ───
 
 // ─── PANEL DE TASAS ───────────────────────
 const TASAS_ACTUALIZADAS = "21 feb 2025";
