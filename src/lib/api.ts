@@ -153,7 +153,10 @@ export async function getReservas() {
         const url = "https://apis.datos.gob.ar/series/api/series/?ids=116.4_TCRZE_0_A_23_0&limit=400&sort=desc&format=json";
         const res = await fetch(url, { next: { revalidate: 86400 }, signal: t.signal });
         t.clear();
-        if (!res.ok) throw new Error(`Reservas API error: ${res.status}`);
+        if (!res.ok) {
+            console.error(`[getReservas] API error: ${res.status}`);
+            return FALLBACK.reservas;
+        }
         const json = await res.json();
         const rows = (json.data ?? []) as [string, number | null][];
         if (rows.length === 0) return FALLBACK.reservas;
