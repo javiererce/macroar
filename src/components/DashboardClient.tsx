@@ -727,9 +727,12 @@ const LiveCounter = () => {
 
 // ── Main Layout ───────────────────────────────────────────
 
-export default function DashboardClient({ data }: DashboardProps) {
+export default function DashboardClient({ data: initialData }: DashboardProps) {
+    const live = useFetch("/api/indicators", (d: any) => d, initialData);
+    const data = live.data || initialData;
+
     const [dark, setDark] = useState(true);
-    const [loading, setLoading] = useState(false); // Data is pre-fetched via SSR
+    const [loading, setLoading] = useState(false);
     const [tab, setTab] = useState("resumen");
     const [alertOpen, setAlertOpen] = useState(false);
     const [exportOpen, setExportOpen] = useState(false);
@@ -829,6 +832,7 @@ export default function DashboardClient({ data }: DashboardProps) {
                             <Download size={18} /> <span className="hidden sm:inline">Exportar</span>
                         </button>
 
+                        <StatusBadge loading={live.loading} error={live.error} lastUpdated={live.lastUpdated} onRefresh={live.refresh} />
                         <LiveCounter />
                     </div>
                 </div>
@@ -1626,18 +1630,23 @@ const fallbackCryptos = [
     { id: "ripple", nombre: "XRP", simbolo: "XRP", precio: 2.48, var24h: -0.8, var7d: 5.6, mcap: "142B", color: C_CRYPTO.accent, icon: "✕" },
 ];
 
-const transformCrypto = (data: any[]) => {
-    if (!Array.isArray(data)) return fallbackCryptos;
-    return data.map(coin => ({
-        id: coin.id,
-        nombre: coin.name,
-        simbolo: coin.symbol.toUpperCase(),
-        precio: coin.current_price,
-        var24h: coin.price_change_percentage_24h_in_currency || 0,
-        var7d: coin.price_change_percentage_7d_in_currency || 0,
-        mcap: coin.market_cap >= 1e12 ? `${(coin.market_cap / 1e12).toFixed(2)}T` : (coin.market_cap >= 1e9 ? `${(coin.market_cap / 1e9).toFixed(0)}B` : `${(coin.market_cap / 1e6).toFixed(0)}M`),
-        color: coin.symbol === 'btc' ? '#f7931a' : coin.symbol === 'eth' ? '#627eea' : coin.symbol === 'usdt' ? '#26a17b' : 'var(--accent)',
-        icon: coin.symbol === 'btc' ? '₿' : coin.symbol === 'eth' ? 'Ξ' : coin.symbol === 'usdt' ? '₮' : '•'
+const transformCryptoCap = (json: any) => {
+    if (!json || !json.data) return fallbackCryptos;
+    const colorMap: any = { BTC: '#F7931A', ETH: '#627EEA', USDT: '#26A17B', BNB: '#F3BA2F', SOL: '#00FFA3', XRP: '#23292F' };
+    const iconMap: any = { BTC: '₿', ETH: 'Ξ', USDT: '₮', BNB: 'B', SOL: '◎', XRP: '✕' };
+
+    return json.data.map((c: any) => ({
+        id: c.id,
+        nombre: c.name,
+        simbolo: c.symbol,
+        precio: parseFloat(c.priceUsd),
+        var24h: parseFloat(c.changePercent24Hr),
+        var7d: 0,
+        mcap: parseFloat(c.marketCapUsd) >= 1e12
+            ? `${(parseFloat(c.marketCapUsd) / 1e12).toFixed(2)}T`
+            : (parseFloat(c.marketCapUsd) >= 1e9 ? `${(parseFloat(c.marketCapUsd) / 1e9).toFixed(1)}B` : `${(parseFloat(c.marketCapUsd) / 1e6).toFixed(0)}M`),
+        color: colorMap[c.symbol] || 'var(--accent)',
+        icon: iconMap[c.symbol] || '•'
     }));
 };
 
@@ -1717,8 +1726,8 @@ const CryptoTab = ({ data }: { data: DashboardData }) => {
     const [monedaVista, setMonedaVista] = useState("USD");
 
     const coinsPool = useFetch(
-        "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=bitcoin,ethereum,tether,binancecoin,solana,ripple&order=market_cap_desc&per_page=100&page=1&sparkline=false&price_change_percentage=24h,7d",
-        transformCrypto,
+        "https://api.coincap.io/v2/assets?ids=bitcoin,ethereum,tether,binance-coin,solana,ripple",
+        transformCryptoCap,
         fallbackCryptos
     );
 
