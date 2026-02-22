@@ -717,7 +717,7 @@ export default function DashboardClient({ data }: DashboardProps) {
             const brecha = ((data.dolares.blue / data.dolares.oficial - 1) * 100).toFixed(1);
             return { ...k, value: `$${data.dolares.blue}`, sub: `Brecha ${brecha}%` };
         }
-        if (k.title === "Reservas BCRA" && data.reservas.length >= 2) {
+        if (k.title === "Reservas BCRA" && data.reservas && data.reservas.length >= 2) {
             const last = data.reservas[data.reservas.length - 1];
             const prev = data.reservas[data.reservas.length - 2];
             const diffNum = last.valor - prev.valor;
@@ -2355,33 +2355,39 @@ const TABS_SIMULADOR = [
     { id: "hipotecarios", label: "🏠 Hipotecarios" },
 ];
 
+const transformIdentity = (d: any) => d;
+const fallbackInflacion = [{ fecha: "2025-01-01", valor: FALLBACK.inflacionMensual }];
+const fallbackRiesgo = [{ fecha: "2025-02-21", valor: FALLBACK.riesgoPais }];
+
 const SimuladorTab = () => {
     const [tab, setTab] = useState("live");
+
+    const dolarFallback = React.useMemo(() => Object.entries(CASAS_MAP).map(([casa]) => {
+        const fbKey = casa === "bolsa" ? "mep" : casa === "contadoconliqui" ? "ccl" : casa === "cripto" ? "crypto" : casa;
+        return {
+            casa,
+            compra: (FALLBACK as any)[fbKey]?.compra,
+            venta: (FALLBACK as any)[fbKey]?.venta,
+        };
+    }), []);
 
     // ── APIs en tiempo real ──
     const dolar = useFetch(
         "https://dolarapi.com/v1/dolares",
-        (d: any[]) => d,
-        Object.entries(CASAS_MAP).map(([casa]) => {
-            const fbKey = casa === "bolsa" ? "mep" : casa === "contadoconliqui" ? "ccl" : casa === "cripto" ? "crypto" : casa;
-            return {
-                casa,
-                compra: (FALLBACK as any)[fbKey]?.compra,
-                venta: (FALLBACK as any)[fbKey]?.venta,
-            };
-        })
+        transformIdentity,
+        dolarFallback
     );
 
     const inflacion = useFetch(
         "https://api.argentinadatos.com/v1/finanzas/indices/inflacion",
-        (d: any) => d,
-        [{ fecha: "2025-01-01", valor: FALLBACK.inflacionMensual }]
+        transformIdentity,
+        fallbackInflacion
     );
 
     const riesgoPais = useFetch(
         "https://api.argentinadatos.com/v1/finanzas/indices/riesgo-pais",
-        (d: any) => d,
-        [{ fecha: "2025-02-21", valor: FALLBACK.riesgoPais }]
+        transformIdentity,
+        fallbackRiesgo
     );
 
     const inflMensual = inflacion.data ? inflacion.data[inflacion.data.length - 1]?.valor ?? FALLBACK.inflacionMensual : FALLBACK.inflacionMensual;
