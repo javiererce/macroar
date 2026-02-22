@@ -704,7 +704,7 @@ export default function DashboardClient({ data }: DashboardProps) {
 
     // Merge Real Data with KPIs
     const kpis = kpisInitial.map(k => {
-        if (k.title === "Inflación mensual" && data.inflacion.length) {
+        if (k.title === "Inflación mensual" && data.inflacion.length >= 2) {
             const last = data.inflacion[data.inflacion.length - 1];
             const prev = data.inflacion[data.inflacion.length - 2];
             const trendValue = Number(last.valor) - Number(prev.valor);
@@ -717,7 +717,7 @@ export default function DashboardClient({ data }: DashboardProps) {
             const brecha = ((data.dolares.blue / data.dolares.oficial - 1) * 100).toFixed(1);
             return { ...k, value: `$${data.dolares.blue}`, sub: `Brecha ${brecha}%` };
         }
-        if (k.title === "Reservas BCRA" && data.reservas.length) {
+        if (k.title === "Reservas BCRA" && data.reservas.length >= 2) {
             const last = data.reservas[data.reservas.length - 1];
             const prev = data.reservas[data.reservas.length - 2];
             const diffNum = last.valor - prev.valor;
