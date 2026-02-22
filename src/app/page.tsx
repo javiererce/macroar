@@ -3,7 +3,7 @@
 // Next.js 14 App Router + Recharts + Tailwind
 
 import { Suspense } from "react";
-import { getInflacion, getReservas, getRiesgoPais, getDolares, getDolarHistorico, getTasaBadlar } from "@/lib/api";
+import { getInflacion, getReservas, getRiesgoPais, getDolares, getDolarHistorico, getTasaBadlar, getTasasBancos, getTasasCuentas, getCryptoPrices } from "@/lib/api";
 import DashboardClient from "@/components/DashboardClient";
 import { Loader2 } from "lucide-react";
 
@@ -25,23 +25,29 @@ export const metadata = {
 // Componente servidor: fetcha todos los datos antes de renderizar
 export default async function HomePage() {
   // Fetch paralelo de todas las APIs
-  const [inflacion, reservas, riesgoPais, dolares, dolarHistorico, tasaBadlar] = await Promise.allSettled([
+  const [inflacion, reservas, riesgoPais, dolares, dolarHistorico, tasaBadlar, tasasBancos, tasasCuentas, cryptos] = await Promise.allSettled([
     getInflacion(),
     getReservas(),
     getRiesgoPais(),
     getDolares(),
     getDolarHistorico(),
     getTasaBadlar(),
+    getTasasBancos(),
+    getTasasCuentas(),
+    getCryptoPrices(),
   ]);
 
   // Extraer valores con fallbacks seguros
-  const data = {
+  const data: any = {
     inflacion: inflacion.status === "fulfilled" ? inflacion.value : [],
     reservas: reservas.status === "fulfilled" ? reservas.value : [],
     riesgoPais: riesgoPais.status === "fulfilled" ? riesgoPais.value : { actual: 620, historico: [] },
     dolares: dolares.status === "fulfilled" ? dolares.value : { oficial: 1063, blue: 1220, mep: 1198, ccl: 1205 },
     dolarHistorico: dolarHistorico.status === "fulfilled" ? dolarHistorico.value : [],
     tasaBadlar: tasaBadlar.status === "fulfilled" ? tasaBadlar.value : 34.5,
+    tasasBancos: tasasBancos.status === "fulfilled" ? tasasBancos.value : [],
+    tasasCuentas: tasasCuentas.status === "fulfilled" ? tasasCuentas.value : [],
+    cryptos: cryptos.status === "fulfilled" ? cryptos.value : [],
     lastUpdate: new Date().toISOString(),
   };
 

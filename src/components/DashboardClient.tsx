@@ -66,6 +66,12 @@ const useFetch = (url: string, transform: any, fallback: any) => {
     const [error, setError] = useState(false);
     const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
+    const transformRef = React.useRef(transform);
+    const fallbackRef = React.useRef(fallback);
+
+    React.useEffect(() => { transformRef.current = transform; }, [transform]);
+    React.useEffect(() => { fallbackRef.current = fallback; }, [fallback]);
+
     const fetch_ = useCallback(async () => {
         setLoading(true);
         setError(false);
@@ -73,15 +79,16 @@ const useFetch = (url: string, transform: any, fallback: any) => {
             const res = await fetch(url, { cache: "no-store" });
             if (!res.ok) throw new Error();
             const json = await res.json();
-            setData(transform ? transform(json) : json);
+            const t = transformRef.current;
+            setData(t ? t(json) : json);
             setLastUpdated(new Date());
             setError(false);
         } catch {
-            setData(fallback ?? null);
+            setData(fallbackRef.current ?? null);
             setError(true);
         }
         setLoading(false);
-    }, [url, transform, fallback]);
+    }, [url]);
 
     useEffect(() => {
         fetch_();
@@ -207,7 +214,7 @@ const ChartCard = ({ title, source, badge, badgeColor, children }: ChartCardProp
             </div>
             <span className="text-muted text-[11px] font-medium opacity-50">{source}</span>
         </div>
-        <div className="h-[260px] w-full">
+        <div className="h-[260px] w-full" style={{ minWidth: 0, minHeight: 0 }}>
             {children}
         </div>
     </div>
@@ -731,7 +738,8 @@ const LiveCounter = () => {
 // ── Main Layout ───────────────────────────────────────────
 
 export default function DashboardClient({ data: initialData }: DashboardProps) {
-    const live = useFetch("/api/indicators", (d: any) => d, initialData);
+    const memoTransform = useCallback((d: any) => d, []);
+    const live = useFetch("/api/indicators", memoTransform, initialData);
     const data = live.data || initialData;
 
     const [dark, setDark] = useState(true);
@@ -1625,12 +1633,12 @@ const mockStables = [
 const mockFear = 72; // 0-100, >60 = greed, <40 = fear
 
 const fallbackCryptos = [
-    { id: "bitcoin", nombre: "Bitcoin", simbolo: "BTC", precio: 97800, var24h: 2.4, var7d: 8.1, mcap: "1.93T", color: C_CRYPTO.bitcoin, icon: "₿" },
-    { id: "ethereum", nombre: "Ethereum", simbolo: "ETH", precio: 3420, var24h: -1.2, var7d: 4.3, mcap: "411B", color: C_CRYPTO.ethereum, icon: "Ξ" },
+    { id: "bitcoin", nombre: "Bitcoin", simbolo: "BTC", precio: 67900, var24h: -0.2, var7d: 2.1, mcap: "1.34T", color: C_CRYPTO.bitcoin, icon: "₿" },
+    { id: "ethereum", nombre: "Ethereum", simbolo: "ETH", precio: 2750, var24h: 0.5, var7d: -1.4, mcap: "331B", color: C_CRYPTO.ethereum, icon: "Ξ" },
     { id: "tether", nombre: "Tether", simbolo: "USDT", precio: 1.00, var24h: 0.0, var7d: 0.0, mcap: "140B", color: C_CRYPTO.usdt, icon: "₮" },
-    { id: "binancecoin", nombre: "BNB", simbolo: "BNB", precio: 695, var24h: 1.8, var7d: -2.1, mcap: "101B", color: C_CRYPTO.yellow, icon: "B" },
-    { id: "solana", nombre: "Solana", simbolo: "SOL", precio: 228, var24h: 3.2, var7d: 12.4, mcap: "108B", color: C_CRYPTO.purple, icon: "◎" },
-    { id: "ripple", nombre: "XRP", simbolo: "XRP", precio: 2.48, var24h: -0.8, var7d: 5.6, mcap: "142B", color: C_CRYPTO.accent, icon: "✕" },
+    { id: "binance-coin", nombre: "BNB", simbolo: "BNB", precio: 610, var24h: -0.8, var7d: 1.2, mcap: "89B", color: C_CRYPTO.yellow, icon: "B" },
+    { id: "solana", nombre: "Solana", simbolo: "SOL", precio: 145, var24h: 2.1, var7d: 5.6, mcap: "65B", color: C_CRYPTO.purple, icon: "◎" },
+    { id: "ripple", nombre: "XRP", simbolo: "XRP", precio: 0.62, var24h: -1.2, var7d: 0.5, mcap: "35B", color: C_CRYPTO.accent, icon: "✕" },
 ];
 
 const transformCryptoCap = (data: any) => {
@@ -1641,15 +1649,15 @@ const transformCryptoCap = (data: any) => {
     return data.map((c: any) => ({
         id: c.id,
         nombre: c.name,
-        simbolo: c.symbol,
+        simbolo: c.symbol === 'BUSD' ? 'BNB' : c.symbol, // Hotfix for some API symbol variations
         precio: parseFloat(c.priceUsd),
         var24h: parseFloat(c.changePercent24Hr),
         var7d: 0,
         mcap: parseFloat(c.marketCapUsd) >= 1e12
             ? `${(parseFloat(c.marketCapUsd) / 1e12).toFixed(2)}T`
             : (parseFloat(c.marketCapUsd) >= 1e9 ? `${(parseFloat(c.marketCapUsd) / 1e9).toFixed(1)}B` : `${(parseFloat(c.marketCapUsd) / 1e6).toFixed(0)}M`),
-        color: colorMap[c.symbol] || 'var(--accent)',
-        icon: iconMap[c.symbol] || '•'
+        color: colorMap[c.symbol] || colorMap[c.id.toUpperCase()] || 'var(--accent)',
+        icon: iconMap[c.symbol] || iconMap[c.id.toUpperCase()] || '•'
     }));
 };
 
