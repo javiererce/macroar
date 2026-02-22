@@ -2053,12 +2053,28 @@ const CryptoTab = ({ data }: { data: DashboardData }) => {
 
 // ─── SIMULADOR Y TASAS EN VIVO ──────────────────────────────────────────────
 const C_SIMULADOR = {
-    bg: "transparent", card: "var(--card)", card2: "var(--card2)", border: "var(--border-color)",
-    accent: "var(--accent)", green: "var(--green)", red: "var(--red)", yellow: "var(--yellow)",
-    purple: "var(--purple)", orange: "var(--orange)", text: "var(--text)", muted: "var(--muted)",
+    bg: "transparent",
+    card: "var(--card)",
+    card2: "var(--card2)",
+    border: "var(--border-color)",
+    accent: "#FF0080", // Buenbit Pink
+    green: "#00FFA3",  // Buenbit Cyan/Green
+    red: "#FF3B3B",
+    yellow: "#FFD600",
+    purple: "#8A2BE2",
+    orange: "#FF8A00",
+    text: "var(--text)",
+    muted: "var(--muted)",
 };
 
-const tt_simulador = { backgroundColor: "var(--card2)", border: "1px solid var(--border-color)", borderRadius: 8, color: "var(--text)", fontSize: 12 };
+const tt_simulador = {
+    backgroundColor: "#1A1A1A",
+    border: "1px solid #333",
+    borderRadius: 12,
+    color: "#FFF",
+    fontSize: 12,
+    boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.4)"
+};
 
 // ─── FALLBACK (si la API falla, mostramos esto con etiqueta ESTIMADO) ────────
 const FALLBACK = {
@@ -2132,20 +2148,20 @@ const SimuladorPF = ({ inflacionMensual, plazosFijos }: any) => {
     const ganReal = (b.tna / 100 * plazoNum / 365 - inflPer / 100) * 100;
 
     return (
-        <div style={{ background: C_SIMULADOR.card2, borderRadius: 12, padding: "1.25rem", marginTop: 14 }}>
-            <h4 style={{ color: C_SIMULADOR.text, fontSize: 13, fontWeight: 600, marginBottom: 12 }}>🧮 Simulador de Plazo Fijo</h4>
+        <div style={{ background: C_SIMULADOR.card, borderRadius: 20, padding: "20px", marginTop: 20, border: `1px solid ${C_SIMULADOR.border}` }}>
+            <h4 style={{ color: C_SIMULADOR.text, fontSize: 14, fontWeight: 800, marginBottom: 16, textTransform: "uppercase", letterSpacing: "1px" }}>🧮 Simulador de Inversión</h4>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 14 }}>
                 <div>
                     <label style={{ color: C_SIMULADOR.muted, fontSize: 11, display: "block", marginBottom: 4 }}>BANCO</label>
                     <select value={banco} onChange={e => setBanco(e.target.value)}
-                        style={{ width: "100%", background: C_SIMULADOR.bg, border: `1px solid ${C_SIMULADOR.border}`, borderRadius: 8, color: C_SIMULADOR.text, padding: "8px 10px", fontSize: 12 }}>
-                        {plazosFijos.map(p => <option key={p.nombre}>{p.nombre}</option>)}
+                        style={{ width: "100%", background: C_SIMULADOR.card, border: `1px solid ${C_SIMULADOR.border}`, borderRadius: 10, color: C_SIMULADOR.text, padding: "8px 10px", fontSize: 12 }}>
+                        {list.map((p: any) => <option key={p.nombre}>{p.nombre}</option>)}
                     </select>
                 </div>
                 <div>
                     <label style={{ color: C_SIMULADOR.muted, fontSize: 11, display: "block", marginBottom: 4 }}>MONTO (ARS)</label>
                     <input type="number" value={monto} onChange={e => setMonto(e.target.value)}
-                        style={{ width: "100%", background: C_SIMULADOR.bg, border: `1px solid ${C_SIMULADOR.border}`, borderRadius: 8, color: C_SIMULADOR.text, padding: "8px 10px", fontSize: 12, boxSizing: "border-box" }} />
+                        style={{ width: "100%", background: C_SIMULADOR.card, border: `1px solid ${C_SIMULADOR.border}`, borderRadius: 10, color: C_SIMULADOR.text, padding: "8px 10px", fontSize: 12, boxSizing: "border-box" }} />
                 </div>
                 <div>
                     <label style={{ color: C_SIMULADOR.muted, fontSize: 11, display: "block", marginBottom: 4 }}>PLAZO (días)</label>
@@ -2333,88 +2349,121 @@ const RiesgoPaisPanel = ({ data, loading, error, lastUpdated, onRefresh }: any) 
 
 // ─── TABS ORIGINALES ─────────────────────────────────────────────────────────
 const TabCuentas = ({ inflacionAnual, liveCuentas }: any) => {
-    const sorted = [...(liveCuentas && liveCuentas.length > 0 ? liveCuentas : cuentasRemuneradas)].sort((a, b) => b.tna - a.tna);
+    const sorted = [...(liveCuentas && liveCuentas.length > 0 ? liveCuentas : cuentasRemuneradas)].sort((a, b) => b.tna - a.tna).slice(0, 10);
+
     return (
-        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-            <div style={{ background: `${C_SIMULADOR.accent}11`, border: `1px solid ${C_SIMULADOR.accent}33`, borderRadius: 10, padding: "10px 14px" }}>
-                <p style={{ color: C_SIMULADOR.muted, fontSize: 12, margin: 0 }}>
-                    💡 Las tasas de bancos se actualizan manualmente — se verifican cada semana.
-                    Última verificación: <strong style={{ color: C_SIMULADOR.text }}>{TASAS_ACTUALIZADAS}</strong>.
-                    Para ganarle a la inflación anual necesitás al menos <strong style={{ color: C_SIMULADOR.yellow }}>{inflacionAnual}% TNA.</strong>
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            <div style={{ background: `${C_SIMULADOR.accent}11`, border: `1px solid ${C_SIMULADOR.accent}33`, borderRadius: 16, padding: "14px 18px" }}>
+                <p style={{ color: C_SIMULADOR.muted, fontSize: 13, margin: 0, lineHeight: "1.5" }}>
+                    💰 <strong style={{ color: C_SIMULADOR.text }}>Cuentas Remuneradas</strong> — Liquidez inmediata con los mejores rendimientos del mercado.
                 </p>
             </div>
-            <div style={{ background: C_SIMULADOR.card, border: `1px solid ${C_SIMULADOR.border}`, borderRadius: 12, padding: "1.25rem" }}>
-                <h3 style={{ color: C_SIMULADOR.text, fontSize: 13, fontWeight: 600, marginBottom: 14 }}>TNA — Cuentas Remuneradas</h3>
-                <ResponsiveContainer width="100%" height={200}>
-                    <BarChart data={sorted} layout="vertical">
-                        <CartesianGrid strokeDasharray="3 3" stroke={C_SIMULADOR.border} />
-                        <XAxis type="number" tick={{ fill: C_SIMULADOR.muted, fontSize: 10 }} unit="%" domain={[0, 40]} />
-                        <YAxis type="category" dataKey="nombre" tick={{ fill: C_SIMULADOR.muted, fontSize: 10 }} width={100} />
-                        <Tooltip contentStyle={tt_simulador} formatter={(v: any) => [`${v}%`, "TNA"]} cursor={{ fill: "transparent" }} />
-                        <ReferenceLine x={inflacionAnual} stroke={C_SIMULADOR.red} strokeDasharray="4 4"
-                            label={{ value: `Inflación ${inflacionAnual}%`, fill: C_SIMULADOR.red, fontSize: 10 }} />
-                        <Bar dataKey="tna" radius={[0, 6, 6, 0]}>
-                            {sorted.map((e, i) => <Cell key={i} fill={e.tna >= inflacionAnual ? C_SIMULADOR.green : e.tna >= inflacionAnual * 0.6 ? C_SIMULADOR.yellow : C_SIMULADOR.red} />)}
-                        </Bar>
+
+            {/* Gráfico de Tasas Cuentas */}
+            <div style={{ background: C_SIMULADOR.card, border: `1px solid ${C_SIMULADOR.border}`, borderRadius: 20, padding: "20px" }}>
+                <h3 style={{ color: C_SIMULADOR.text, fontSize: 14, fontWeight: 800, marginBottom: 20, textTransform: "uppercase", letterSpacing: "1px" }}>📊 TNA Cuentas (%)</h3>
+                <ResponsiveContainer width="100%" height={220}>
+                    <BarChart data={sorted} margin={{ left: -20 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={false} />
+                        <XAxis dataKey="nombre" tick={{ fill: C_SIMULADOR.muted, fontSize: 9 }} axisLine={false} tickLine={false} interval={0}
+                            tickFormatter={(val) => val.length > 8 ? val.substring(0, 8) + '.' : val} />
+                        <YAxis tick={{ fill: C_SIMULADOR.muted, fontSize: 10 }} unit="%" axisLine={false} tickLine={false} />
+                        <Tooltip contentStyle={tt_simulador} cursor={{ fill: 'rgba(255,255,255,0.05)' }}
+                            formatter={(v: any) => [`${v}%`, 'TNA']} />
+                        <Bar dataKey="tna" fill={C_SIMULADOR.green} radius={[6, 6, 0, 0]} isAnimationActive={false} />
                     </BarChart>
                 </ResponsiveContainer>
             </div>
-            {sorted.map((b, i) => (
-                <div key={b.nombre} style={{ background: C_SIMULADOR.card, border: `1px solid ${i === 0 ? C_SIMULADOR.accent : C_SIMULADOR.border}`, borderRadius: 10, padding: "14px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                        <div style={{ width: 38, height: 38, borderRadius: 10, background: `${b.logoColor}22`, border: `1px solid ${b.logoColor}44`, display: "flex", alignItems: "center", justifyContent: "center", color: b.logoColor, fontWeight: 800, fontSize: 11 }}>
-                            {b.nombre.slice(0, 2).toUpperCase()}
-                        </div>
-                        <div>
-                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                                <span style={{ color: C_SIMULADOR.text, fontWeight: 600, fontSize: 14 }}>{b.nombre}</span>
-                                {b.tag && <span style={{ background: `${b.logoColor}22`, color: b.logoColor, fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 4 }}>{b.tag}</span>}
+
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 12 }}>
+                {sorted.map((b, i) => (
+                    <div key={b.nombre} style={{ background: C_SIMULADOR.card, border: `1px solid ${C_SIMULADOR.border}`, borderRadius: 16, padding: "16px" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                                <div style={{ width: 34, height: 34, borderRadius: 10, background: `${C_SIMULADOR.accent}11`, border: `1px solid ${C_SIMULADOR.accent}33`, display: "flex", alignItems: "center", justifyContent: "center", color: C_SIMULADOR.accent, fontWeight: 800, fontSize: 10 }}>
+                                    {b.nombre.slice(0, 2).toUpperCase()}
+                                </div>
+                                <div>
+                                    <div style={{ color: C_SIMULADOR.text, fontWeight: 700, fontSize: 14 }}>{b.nombre}</div>
+                                    <div style={{ color: C_SIMULADOR.muted, fontSize: 10 }}>{b.tipo || "Fintech"}</div>
+                                </div>
                             </div>
-                            <div style={{ color: C_SIMULADOR.muted, fontSize: 11 }}>{b.tipo}</div>
+                            <div style={{ textAlign: "right" }}>
+                                <div style={{ color: C_SIMULADOR.green, fontWeight: 800, fontSize: 18 }}>{b.tna}%</div>
+                                <div style={{ color: C_SIMULADOR.muted, fontSize: 8 }}>TNA</div>
+                            </div>
                         </div>
                     </div>
-                    <div style={{ display: "flex", gap: 20, alignItems: "center", flexWrap: "wrap" }}>
-                        <div style={{ textAlign: "center" }}>
-                            <div style={{ color: C_SIMULADOR.muted, fontSize: 10 }}>TNA</div>
-                            <div style={{ color: C_SIMULADOR.text, fontWeight: 700, fontSize: 18 }}>{b.tna}%</div>
-                        </div>
-                        <div style={{ textAlign: "center" }}>
-                            <div style={{ color: C_SIMULADOR.muted, fontSize: 10 }}>Mensual</div>
-                            <div style={{ color: C_SIMULADOR.accent, fontWeight: 600, fontSize: 14 }}>{(b.tna / 12).toFixed(1)}%</div>
-                        </div>
-                        <div style={{ background: b.tna >= inflacionAnual ? `${C_SIMULADOR.green}22` : `${C_SIMULADOR.red}22`, color: b.tna >= inflacionAnual ? C_SIMULADOR.green : C_SIMULADOR.red, padding: "6px 12px", borderRadius: 20, fontSize: 11, fontWeight: 700 }}>
-                            {b.tna >= inflacionAnual ? "✅ Le gana a inflación" : "⚠️ Pierde vs inflación"}
-                        </div>
-                    </div>
-                </div>
-            ))}
+                ))}
+            </div>
         </div>
     );
 };
 
 const TabPlazoFijo = ({ inflacionMensual, inflacionAnual, liveBancos }: any) => {
-    const sorted = [...(liveBancos && liveBancos.length > 0 ? liveBancos : plazosFijos)].sort((a, b) => b.tna - a.tna);
+    const list = [...(liveBancos && liveBancos.length > 0 ? liveBancos : plazosFijos)].sort((a, b) => b.tna - a.tna);
+    const sorted = list.slice(0, 15); // Solo los 15 mejores (mayores tasas)
+
     return (
-        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-            <div style={{ background: `${C_SIMULADOR.yellow}11`, border: `1px solid ${C_SIMULADOR.yellow}33`, borderRadius: 10, padding: "10px 14px" }}>
-                <p style={{ color: C_SIMULADOR.muted, fontSize: 12, margin: 0 }}>
-                    💡 Para que un plazo fijo a 30 días sea rentable en términos reales necesitás una TNA mayor a <strong style={{ color: C_SIMULADOR.yellow }}>{inflacionAnual}%</strong>.
-                    La inflación mensual actual es <strong style={{ color: C_SIMULADOR.red }}>{inflacionMensual}%</strong>.
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            <div style={{ background: `${C_SIMULADOR.accent}11`, border: `1px solid ${C_SIMULADOR.accent}33`, borderRadius: 16, padding: "14px 18px" }}>
+                <p style={{ color: C_SIMULADOR.muted, fontSize: 13, margin: 0, lineHeight: "1.5" }}>
+                    🚀 <strong style={{ color: C_SIMULADOR.text }}>Comparativa de Rendimiento</strong> — Mostrando los 15 mejores bancos.
+                    TNA mínima recomendada vs Inflación: <strong style={{ color: C_SIMULADOR.accent }}>{inflacionAnual}%</strong>.
                 </p>
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 8 }}>
+
+            {/* Gráfico de Tasas */}
+            <div style={{ background: C_SIMULADOR.card, border: `1px solid ${C_SIMULADOR.border}`, borderRadius: 20, padding: "20px" }}>
+                <h3 style={{ color: C_SIMULADOR.text, fontSize: 14, fontWeight: 800, marginBottom: 20, textTransform: "uppercase", letterSpacing: "1px" }}>📊 Comparativa TNA (%)</h3>
+                <ResponsiveContainer width="100%" height={250}>
+                    <BarChart data={sorted} margin={{ left: -20 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={false} />
+                        <XAxis dataKey="nombre" tick={{ fill: C_SIMULADOR.muted, fontSize: 9 }} axisLine={false} tickLine={false} interval={0}
+                            tickFormatter={(val) => val.length > 10 ? val.substring(0, 10) + '...' : val} />
+                        <YAxis tick={{ fill: C_SIMULADOR.muted, fontSize: 10 }} unit="%" axisLine={false} tickLine={false} domain={[0, 40]} />
+                        <Tooltip contentStyle={tt_simulador} cursor={{ fill: 'rgba(255,255,255,0.05)' }}
+                            formatter={(v: any) => [`${v}%`, 'TNA']} />
+                        <Bar dataKey="tna" fill={C_SIMULADOR.accent} radius={[6, 6, 0, 0]} isAnimationActive={false} />
+                    </BarChart>
+                </ResponsiveContainer>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 12 }}>
                 {sorted.map((b, i) => (
-                    <div key={b.nombre} style={{ background: C_SIMULADOR.card, border: `1px solid ${i === 0 ? C_SIMULADOR.accent : C_SIMULADOR.border}`, borderRadius: 10, padding: "12px 14px" }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
-                            <div>
-                                <div style={{ color: C_SIMULADOR.text, fontWeight: 600, fontSize: 13 }}>{b.nombre}</div>
-                                {b.tag && <span style={{ background: `${C_SIMULADOR.accent}22`, color: C_SIMULADOR.accent, fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius: 4 }}>{b.tag}</span>}
+                    <div key={b.nombre} style={{
+                        background: C_SIMULADOR.card,
+                        border: `1px solid ${i === 0 ? C_SIMULADOR.accent : C_SIMULADOR.border}`,
+                        borderRadius: 16,
+                        padding: "16px",
+                        transition: "transform 0.2s ease"
+                    }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                                <div style={{ width: 34, height: 34, borderRadius: 10, background: `${b.logoColor || '#333'}22`, border: `1px solid ${b.logoColor || '#333'}44`, display: "flex", alignItems: "center", justifyContent: "center", color: b.logoColor || '#999', fontWeight: 800, fontSize: 10 }}>
+                                    {b.nombre.slice(0, 2).toUpperCase()}
+                                </div>
+                                <div>
+                                    <div style={{ color: C_SIMULADOR.text, fontWeight: 700, fontSize: 14 }}>{b.nombre}</div>
+                                    {b.tag && <span style={{ background: `${C_SIMULADOR.accent}22`, color: C_SIMULADOR.accent, fontSize: 9, fontWeight: 800, padding: "2px 6px", borderRadius: 6, textTransform: "uppercase" }}>{b.tag}</span>}
+                                </div>
+                            </div>
+                            <div style={{ textAlign: "right" }}>
+                                <div style={{ color: C_SIMULADOR.accent, fontWeight: 800, fontSize: 20 }}>{b.tna}%</div>
+                                <div style={{ color: C_SIMULADOR.muted, fontSize: 9 }}>TNA ANUAL</div>
                             </div>
                         </div>
-                        <div style={{ display: "flex", justifyContent: "space-between" }}>
-                            <div><div style={{ color: C_SIMULADOR.muted, fontSize: 10 }}>TNA</div><div style={{ color: C_SIMULADOR.text, fontWeight: 700, fontSize: 16 }}>{b.tna}%</div></div>
-                            <div><div style={{ color: C_SIMULADOR.muted, fontSize: 10 }}>TAE</div><div style={{ color: C_SIMULADOR.accent, fontWeight: 600, fontSize: 14 }}>{b.tae}%</div></div>
-                            <div><div style={{ color: C_SIMULADOR.muted, fontSize: 10 }}>Real</div><div style={{ color: b.tna >= inflacionAnual ? C_SIMULADOR.green : C_SIMULADOR.red, fontWeight: 700, fontSize: 14 }}>{b.tna >= inflacionAnual ? "✅" : "⚠️"}</div></div>
+                        <div style={{ display: "flex", gap: 10 }}>
+                            <div style={{ flex: 1, background: C_SIMULADOR.card2, borderRadius: 10, padding: "8px", textAlign: "center" }}>
+                                <div style={{ color: C_SIMULADOR.muted, fontSize: 9 }}>MENSUAL</div>
+                                <div style={{ color: C_SIMULADOR.text, fontWeight: 600, fontSize: 13 }}>{(b.tna / 12).toFixed(2)}%</div>
+                            </div>
+                            <div style={{ flex: 1, background: b.tna >= inflacionAnual ? `${C_SIMULADOR.green}11` : `${C_SIMULADOR.red}11`, borderRadius: 10, padding: "8px", textAlign: "center", border: `1px solid ${b.tna >= inflacionAnual ? C_SIMULADOR.green : C_SIMULADOR.red}33` }}>
+                                <div style={{ color: b.tna >= inflacionAnual ? C_SIMULADOR.green : C_SIMULADOR.red, fontWeight: 700, fontSize: 12 }}>
+                                    {b.tna >= inflacionAnual ? "GANA" : "PIERDE"}
+                                </div>
+                                <div style={{ color: C_SIMULADOR.muted, fontSize: 8 }}>VS. INFLACIÓN</div>
+                            </div>
                         </div>
                     </div>
                 ))}
@@ -2513,10 +2562,10 @@ const SimuladorTab = ({ data: liveData }: { data: any }) => {
             {/* TAB: EN VIVO */}
             {tab === "live" && (
                 <div className="animate-in fade-in slide-in-from-bottom-4 duration-500" style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-                    <div style={{ background: `${C_SIMULADOR.green}11`, border: `1px solid ${C_SIMULADOR.green}33`, borderRadius: 10, padding: "10px 14px" }}>
-                        <p style={{ color: C_SIMULADOR.muted, fontSize: 12, margin: 0 }}>
-                            🔴 Esta sección trae datos <strong style={{ color: C_SIMULADOR.green }}>en tiempo real</strong> desde APIs públicas.
-                            El dólar se actualiza cada 3 minutos. La inflación y riesgo país se actualizan con cada publicación oficial.
+                    <div style={{ background: `${C_SIMULADOR.accent}11`, border: `1px solid ${C_SIMULADOR.accent}33`, borderRadius: 16, padding: "12px 16px" }}>
+                        <p style={{ color: C_SIMULADOR.muted, fontSize: 12, margin: 0, lineHeight: 1.6 }}>
+                            🔴 <strong style={{ color: C_SIMULADOR.accent }}>Datos en tiempo real</strong> — El dólar se actualiza cada 3 minutos.
+                            La inflación y riesgo país se sincronizan con publicaciones oficiales del INDEC y BCRA.
                         </p>
                     </div>
                     <DolarPanel
@@ -2553,30 +2602,26 @@ const SimuladorTab = ({ data: liveData }: { data: any }) => {
                         </p>
                     </div>
                     {[...prestamos].sort((a, b) => a.cft - b.cft).map((p, i) => (
-                        <div key={p.nombre} style={{ background: C_SIMULADOR.card, border: `1px solid ${i === 0 ? C_SIMULADOR.green : C_SIMULADOR.border}`, borderRadius: 10, padding: "14px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
+                        <div key={p.nombre} style={{ background: C_SIMULADOR.card, border: `1px solid ${i === 0 ? C_SIMULADOR.accent : C_SIMULADOR.border}`, borderRadius: 16, padding: "16px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
                             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                                <div style={{ width: 38, height: 38, borderRadius: 10, background: `${p.logoColor}22`, border: `1px solid ${p.logoColor}44`, display: "flex", alignItems: "center", justifyContent: "center", color: p.logoColor, fontWeight: 800, fontSize: 11 }}>
+                                <div style={{ width: 38, height: 38, borderRadius: 12, background: `${p.logoColor}11`, border: `1px solid ${p.logoColor}33`, display: "flex", alignItems: "center", justifyContent: "center", color: p.logoColor, fontWeight: 800, fontSize: 11 }}>
                                     {p.nombre.slice(0, 2).toUpperCase()}
                                 </div>
                                 <div>
-                                    <span style={{ color: C_SIMULADOR.text, fontWeight: 600, fontSize: 14 }}>{p.nombre}</span>
-                                    {p.tag && <span style={{ background: `${C_SIMULADOR.green}22`, color: C_SIMULADOR.green, fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 4, marginLeft: 8 }}>{p.tag}</span>}
+                                    <span style={{ color: C_SIMULADOR.text, fontWeight: 700, fontSize: 14 }}>{p.nombre}</span>
+                                    {p.tag && <span style={{ background: `${C_SIMULADOR.accent}22`, color: C_SIMULADOR.accent, fontSize: 9, fontWeight: 800, padding: "2px 8px", borderRadius: 6, marginLeft: 8 }}>{p.tag}</span>}
                                 </div>
                             </div>
                             <div style={{ display: "flex", gap: 20, alignItems: "center", flexWrap: "wrap" }}>
                                 <div style={{ textAlign: "center" }}>
-                                    <div style={{ color: C_SIMULADOR.muted, fontSize: 10 }}>CFT</div>
-                                    <div style={{ color: i === 0 ? C_SIMULADOR.green : C_SIMULADOR.text, fontWeight: 700, fontSize: 16 }}>{p.cft}%</div>
+                                    <div style={{ color: C_SIMULADOR.muted, fontSize: 9 }}>CFT</div>
+                                    <div style={{ color: i === 0 ? C_SIMULADOR.green : C_SIMULADOR.text, fontWeight: 800, fontSize: 18 }}>{p.cft}%</div>
                                 </div>
                                 <div style={{ textAlign: "center" }}>
-                                    <div style={{ color: C_SIMULADOR.muted, fontSize: 10 }}>TNA</div>
-                                    <div style={{ color: C_SIMULADOR.accent, fontWeight: 600, fontSize: 14 }}>{p.tna}%</div>
+                                    <div style={{ color: C_SIMULADOR.muted, fontSize: 9 }}>CUOTA/MES</div>
+                                    <div style={{ color: C_SIMULADOR.yellow, fontWeight: 700, fontSize: 15 }}>${p.cuota12.toLocaleString("es-AR")}</div>
                                 </div>
-                                <div style={{ textAlign: "center" }}>
-                                    <div style={{ color: C_SIMULADOR.muted, fontSize: 10 }}>Cuota/mes</div>
-                                    <div style={{ color: C_SIMULADOR.yellow, fontWeight: 600, fontSize: 14 }}>${p.cuota12.toLocaleString("es-AR")}</div>
-                                </div>
-                                {i === 0 && <div style={{ background: `${C_SIMULADOR.green}22`, color: C_SIMULADOR.green, padding: "6px 12px", borderRadius: 20, fontSize: 11, fontWeight: 700 }}>💡 Más barato</div>}
+                                {i === 0 && <div style={{ background: `${C_SIMULADOR.green}22`, color: C_SIMULADOR.green, padding: "6px 14px", borderRadius: 20, fontSize: 10, fontWeight: 800 }}>MÁS BAJO</div>}
                             </div>
                         </div>
                     ))}
@@ -2592,25 +2637,30 @@ const SimuladorTab = ({ data: liveData }: { data: any }) => {
                             Cuota simulada por cada <strong style={{ color: C_SIMULADOR.text }}>$100.000 de crédito</strong> a 20 años.
                         </p>
                     </div>
-                    {[...hipotecarios].sort((a, b) => a.cuota100k - b.cuota100k).map((h, i) => (
-                        <div key={h.nombre} style={{ background: C_SIMULADOR.card, border: `1px solid ${i === 0 ? C_SIMULADOR.purple : C_SIMULADOR.border}`, borderRadius: 10, padding: "14px 16px" }}>
+                    {[...hipotecarios].sort((a, b) => a.cuota100k - b.cuota100k).map((h: any, i: number) => (
+                        <div key={h.nombre} style={{ background: C_SIMULADOR.card, border: `1px solid ${i === 0 ? C_SIMULADOR.accent : C_SIMULADOR.border}`, borderRadius: 16, padding: "16px" }}>
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
                                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                                    <div style={{ width: 38, height: 38, borderRadius: 10, background: `${h.logoColor}22`, border: `1px solid ${h.logoColor}44`, display: "flex", alignItems: "center", justifyContent: "center", color: h.logoColor, fontWeight: 800, fontSize: 11 }}>
+                                    <div style={{ width: 40, height: 40, borderRadius: 12, background: `${h.logoColor}11`, border: `1px solid ${h.logoColor}33`, display: "flex", alignItems: "center", justifyContent: "center", color: h.logoColor, fontWeight: 800, fontSize: 11 }}>
                                         {h.nombre.slice(0, 2).toUpperCase()}
                                     </div>
                                     <div>
                                         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                                            <span style={{ color: C_SIMULADOR.text, fontWeight: 600, fontSize: 13 }}>{h.nombre}</span>
-                                            {h.tag && <span style={{ background: `${C_SIMULADOR.purple}22`, color: C_SIMULADOR.purple, fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 4 }}>{h.tag}</span>}
+                                            <span style={{ color: C_SIMULADOR.text, fontWeight: 700, fontSize: 14 }}>{h.nombre}</span>
+                                            {h.tag && <span style={{ background: `${C_SIMULADOR.accent}22`, color: C_SIMULADOR.accent, fontSize: 9, fontWeight: 800, padding: "2px 8px", borderRadius: 6 }}>{h.tag}</span>}
                                         </div>
                                         <div style={{ color: C_SIMULADOR.muted, fontSize: 11, marginTop: 2 }}>✅ {h.requisito}</div>
                                     </div>
                                 </div>
                                 <div style={{ display: "flex", gap: 20, alignItems: "center" }}>
-                                    <div><div style={{ color: C_SIMULADOR.muted, fontSize: 10 }}>TNA UVA</div><div style={{ color: C_SIMULADOR.purple, fontWeight: 700, fontSize: 16 }}>{h.tna}%</div></div>
-                                    <div><div style={{ color: C_SIMULADOR.muted, fontSize: 10 }}>Cuota/100K</div><div style={{ color: C_SIMULADOR.text, fontWeight: 700, fontSize: 16 }}>${h.cuota100k.toLocaleString("es-AR")}</div></div>
-                                    <div><div style={{ color: C_SIMULADOR.muted, fontSize: 10 }}>Plazo</div><div style={{ color: C_SIMULADOR.accent, fontWeight: 600, fontSize: 14 }}>{h.plazo} años</div></div>
+                                    <div style={{ textAlign: "center" }}>
+                                        <div style={{ color: C_SIMULADOR.muted, fontSize: 9 }}>TNA UVA</div>
+                                        <div style={{ color: C_SIMULADOR.accent, fontWeight: 800, fontSize: 17 }}>{h.tna}%</div>
+                                    </div>
+                                    <div style={{ textAlign: "center" }}>
+                                        <div style={{ color: C_SIMULADOR.muted, fontSize: 9 }}>CUOTA/100K</div>
+                                        <div style={{ color: C_SIMULADOR.text, fontWeight: 700, fontSize: 16 }}>${h.cuota100k.toLocaleString("es-AR")}</div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
