@@ -242,6 +242,25 @@ export async function getTasaBadlar() {
     return Math.round(promedio * 10) / 10;
 }
 
+// ── Cryptos (CoinCap) ───────────────────────────────────────
+export async function getCryptoPrices() {
+    const t = withTimeout();
+    try {
+        const res = await fetch('https://api.coincap.io/v2/assets?ids=bitcoin,ethereum,tether,binance-coin,solana,ripple', {
+            next: { revalidate: 60 }, // Actualizar cada minuto
+            signal: t.signal,
+        });
+        t.clear();
+        if (!res.ok) throw new Error(`CoinCap error: ${res.status}`);
+        const json = await res.json();
+        return json.data || [];
+    } catch (e) {
+        t.clear();
+        console.error("[getCryptoPrices] Error:", e);
+        return [];
+    }
+}
+
 // ── Noticias ────────────────────────────────────────────────
 export async function getNoticias() {
     return FALLBACK.noticias;

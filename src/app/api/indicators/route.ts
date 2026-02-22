@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server';
-import { getInflacion, getReservas, getRiesgoPais, getDolares, getDolarHistorico, getTasaBadlar, getTasasBancos, getTasasCuentas } from '@/lib/api';
+import { getInflacion, getReservas, getRiesgoPais, getDolares, getDolarHistorico, getTasaBadlar, getTasasBancos, getTasasCuentas, getCryptoPrices } from '@/lib/api';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
     try {
-        const [inflacion, reservas, riesgoPais, dolares, dolarHistorico, tasaBadlar, tasasBancos, tasasCuentas] = await Promise.all([
+        const [inflacion, reservas, riesgoPais, dolares, dolarHistorico, tasaBadlar, tasasBancos, tasasCuentas, cryptos] = await Promise.all([
             getInflacion(),
             getReservas(),
             getRiesgoPais(),
@@ -14,6 +14,7 @@ export async function GET() {
             getTasaBadlar(),
             getTasasBancos(),
             getTasasCuentas(),
+            getCryptoPrices(),
         ]);
 
         return NextResponse.json({
@@ -25,6 +26,7 @@ export async function GET() {
             tasaBadlar,
             tasasBancos,
             tasasCuentas,
+            cryptos,
             lastUpdate: new Date().toISOString(),
         });
     } catch (e) {

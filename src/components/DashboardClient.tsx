@@ -43,6 +43,9 @@ interface DashboardData {
     dolares: { oficial: number; blue: number; mep: number; ccl: number };
     dolarHistorico: any[];
     tasaBadlar: number;
+    tasasBancos: any[];
+    tasasCuentas: any[];
+    cryptos: any[];
     lastUpdate: string;
 }
 
@@ -1630,12 +1633,12 @@ const fallbackCryptos = [
     { id: "ripple", nombre: "XRP", simbolo: "XRP", precio: 2.48, var24h: -0.8, var7d: 5.6, mcap: "142B", color: C_CRYPTO.accent, icon: "✕" },
 ];
 
-const transformCryptoCap = (json: any) => {
-    if (!json || !json.data) return fallbackCryptos;
+const transformCryptoCap = (data: any) => {
+    if (!data || !Array.isArray(data)) return fallbackCryptos;
     const colorMap: any = { BTC: '#F7931A', ETH: '#627EEA', USDT: '#26A17B', BNB: '#F3BA2F', SOL: '#00FFA3', XRP: '#23292F' };
     const iconMap: any = { BTC: '₿', ETH: 'Ξ', USDT: '₮', BNB: 'B', SOL: '◎', XRP: '✕' };
 
-    return json.data.map((c: any) => ({
+    return data.map((c: any) => ({
         id: c.id,
         nombre: c.name,
         simbolo: c.symbol,
@@ -1725,17 +1728,17 @@ const CryptoTab = ({ data }: { data: DashboardData }) => {
     const [tab, setTab] = useState("precios");
     const [monedaVista, setMonedaVista] = useState("USD");
 
-    const coinsPool = useFetch(
-        "https://api.coincap.io/v2/assets?ids=bitcoin,ethereum,tether,binance-coin,solana,ripple",
-        transformCryptoCap,
-        fallbackCryptos
-    );
+    // Usamos los datos de cryptos que ya vienen en el objeto 'data' (del aggregate API)
+    const cryptosRaw = (data as any).cryptos;
+    const cryptos = React.useMemo(() =>
+        cryptosRaw && cryptosRaw.length > 0 ? transformCryptoCap(cryptosRaw) : fallbackCryptos,
+        [cryptosRaw]);
 
     const fng = useFetch("https://api.alternative.me/fng/", (d: any) => d.data[0], { value: "50", value_classification: "Neutral" });
 
     const cryptoDolar = useFetch("https://dolarapi.com/v1/dolares/cripto", (d: any) => d, { venta: blue });
 
-    const cryptos = coinsPool.data || fallbackCryptos;
+    // ... usando cryptos calculados arriba
     const mockFearValue = parseInt(fng.data?.value || "50");
     const fearLabel = fng.data?.value_classification || "Neutral";
     const fearColor = mockFearValue >= 60 ? C_CRYPTO.green : mockFearValue >= 40 ? C_CRYPTO.yellow : C_CRYPTO.red;
