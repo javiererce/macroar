@@ -21,7 +21,10 @@ export async function getInflacion() {
             signal: t.signal,
         });
         t.clear();
-        if (!res.ok) throw new Error(`Inflacion API error: ${res.status}`);
+        if (!res.ok) {
+            console.error(`[getInflacion] API error: ${res.status}`);
+            return FALLBACK.inflacion;
+        }
         const json = await res.json() as { fecha: string; valor: number }[];
         if (!Array.isArray(json) || json.length === 0) return FALLBACK.inflacion;
 
@@ -86,7 +89,10 @@ export async function getRiesgoPais() {
             signal: t.signal,
         });
         t.clear();
-        if (!res.ok) throw new Error(`Riesgo API error: ${res.status}`);
+        if (!res.ok) {
+            console.error(`[getRiesgoPais] API error: ${res.status}`);
+            return { actual: 620, historico: FALLBACK.riesgoPais };
+        }
         const json = await res.json() as { fecha: string; valor: number }[];
         if (!Array.isArray(json) || json.length === 0) {
             return { actual: 524, historico: FALLBACK.riesgoPais };
@@ -191,7 +197,10 @@ export async function getTasasBancos() {
             signal: t.signal,
         });
         t.clear();
-        if (!res.ok) throw new Error(`Tasas API error: ${res.status}`);
+        if (!res.ok) {
+            console.error(`[getTasasBancos] API error: ${res.status}`);
+            return [];
+        }
         const json = await res.json() as { entidad: string; tnaClientes: number | null }[];
         if (!Array.isArray(json) || json.length === 0) return [];
 
@@ -254,7 +263,10 @@ export async function getCryptoPrices() {
             signal: t.signal,
         });
         t.clear();
-        if (!res.ok) throw new Error(`CoinCap error: ${res.status}`);
+        if (!res.ok) {
+            console.error(`[getCryptoPrices] API error: ${res.status}`);
+            return [];
+        }
         const json = await res.json();
         return json.data || [];
     } catch (e) {
