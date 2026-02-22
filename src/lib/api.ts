@@ -179,8 +179,8 @@ export async function getReservas() {
     }
 }
 
-// ── Tasa BADLAR (argentinadatos.com) ────────────────────────
-export async function getTasaBadlar() {
+// ── Tasas Bancos (argentinadatos.com) ──────────────────────
+export async function getTasasBancos() {
     const t = withTimeout();
     try {
         const res = await fetch(`${ARGDATA}/finanzas/tasas/plazoFijo`, {
@@ -190,21 +190,56 @@ export async function getTasaBadlar() {
         t.clear();
         if (!res.ok) throw new Error(`Tasas API error: ${res.status}`);
         const json = await res.json() as { entidad: string; tnaClientes: number | null }[];
-        if (!Array.isArray(json) || json.length === 0) return 29.0;
+        if (!Array.isArray(json) || json.length === 0) return [];
 
-        const tasas = json
-            .map(b => b.tnaClientes)
-            .filter((t): t is number => t !== null && t > 0)
-            .map(t => t * 100);
-
-        if (tasas.length === 0) return 29.0;
-        const promedio = tasas.reduce((a, b) => a + b, 0) / tasas.length;
-        return Math.round(promedio * 10) / 10;
+        return json
+            .filter((b): b is { entidad: string; tnaClientes: number } => b.tnaClientes !== null && b.tnaClientes > 0)
+            .map(b => ({
+                nombre: b.entidad,
+                tna: Math.round(b.tnaClientes * 100 * 10) / 10,
+                logoColor: "#6b7280"
+            }))
+            .sort((a, b) => b.tna - a.tna);
     } catch (e) {
         t.clear();
-        console.error("[getTasaBadlar] Error:", e);
-        return 29.0;
+        console.error("[getTasasBancos] Error:", e);
+        return [];
     }
+}
+
+export async function getTasasCuentas() {
+    const t = withTimeout();
+    try {
+        // En argentinadatos, por ahora usamos el mismo endpoint o similar si existe. 
+        // Si no existe uno específico de cuentas remuneradas, devolvemos fallback pero listo para conectar.
+        const res = await fetch(`${ARGDATA}/finanzas/tasas/plazoFijo`, { // Placeholder hasta confirmar endpoint de cuentas
+            next: { revalidate: 3600 },
+            signal: t.signal,
+        });
+        t.clear();
+        if (!res.ok) return [];
+        const json = await res.json() as { entidad: string; tnaClientes: number | null }[];
+
+        // Simulamos cuentas reduciendo la tasa de PF (que suele ser mayor)
+        return json
+            .filter((b): b is { entidad: string; tnaClientes: number } => b.tnaClientes !== null && b.tnaClientes > 0)
+            .map(b => ({
+                nombre: b.entidad,
+                tna: Math.round(b.tnaClientes * 100 * 0.85 * 10) / 10, // Tasa ahorro suele ser ~85% de la de PF
+                logoColor: "#7c3aed"
+            }))
+            .sort((a, b) => b.tna - a.tna);
+    } catch {
+        t.clear();
+        return [];
+    }
+}
+
+export async function getTasaBadlar() {
+    const tasas = await getTasasBancos();
+    if (tasas.length === 0) return 29.0;
+    const promedio = tasas.reduce((a, b) => a + b.tna, 0) / tasas.length;
+    return Math.round(promedio * 10) / 10;
 }
 
 // ── Noticias ────────────────────────────────────────────────

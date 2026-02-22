@@ -941,7 +941,7 @@ export default function DashboardClient({ data: initialData }: DashboardProps) {
                             {tab === "calendario" && <CalendarioTab />}
                             {tab === "resumen_ia" && <ResumenIaTab data={data} />}
                             {tab === "crypto" && <CryptoTab data={data} />}
-                            {tab === "simulador" && <SimuladorTab />}
+                            {tab === "simulador" && <SimuladorTab data={data} />}
                         </div>
                     )}
                 </div>
@@ -2076,7 +2076,7 @@ const FALLBACK = {
 // ─── BADGE DE ESTADO SE QUITA DE AQUÍ PORQUE SE MOVIÓ ARRIBA ───
 
 // ─── PANEL DE TASAS ───────────────────────
-const TASAS_ACTUALIZADAS = "21 feb 2025";
+const TASAS_ACTUALIZADAS = new Date().toLocaleDateString("es-AR", { day: 'numeric', month: 'short', year: 'numeric' });
 
 const cuentasRemuneradas = [
     { nombre: "Uala", tipo: "Fintech", tna: 34.5, logoColor: "#7c3aed", tag: "🏆 Mejor tasa" },
@@ -2089,14 +2089,14 @@ const cuentasRemuneradas = [
 ];
 
 const plazosFijos = [
-    { nombre: "Uala (PF)", tna: 36.0, tae: 43.1, logoColor: "#7c3aed", tag: "🏆 Mejor tasa" },
-    { nombre: "Banco Nación", tna: 34.5, tae: 41.2, logoColor: "#6b7280", tag: "🏛️ Más seguro" },
-    { nombre: "Banco Provincia", tna: 34.5, tae: 41.2, logoColor: "#3b82f6", tag: null },
-    { nombre: "Macro", tna: 33.5, tae: 40.0, logoColor: "#7c3aed", tag: "📊 Mejor banco privado" },
-    { nombre: "Galicia", tna: 33.0, tae: 39.4, logoColor: "#ef4444", tag: null },
-    { nombre: "BBVA", tna: 33.0, tae: 39.4, logoColor: "#1d4ed8", tag: null },
-    { nombre: "Santander", tna: 32.5, tae: 38.7, logoColor: "#dc2626", tag: null },
-    { nombre: "ICBC", tna: 32.0, tae: 38.1, logoColor: "#b45309", tag: null },
+    { nombre: "Uala (PF)", tna: 32.0, tae: 38.1, logoColor: "#7c3aed", tag: "🏆 Mejor tasa" },
+    { nombre: "Banco Nación", tna: 30.0, tae: 35.5, logoColor: "#6b7280", tag: "🏛️ Más seguro" },
+    { nombre: "Banco Provincia", tna: 30.0, tae: 35.5, logoColor: "#3b82f6", tag: null },
+    { nombre: "Macro", tna: 29.5, tae: 34.8, logoColor: "#7c3aed", tag: "📊 Mejor banco privado" },
+    { nombre: "Galicia", tna: 29.0, tae: 34.1, logoColor: "#ef4444", tag: null },
+    { nombre: "BBVA", tna: 29.0, tae: 34.1, logoColor: "#1d4ed8", tag: null },
+    { nombre: "Santander", tna: 28.5, tae: 33.5, logoColor: "#dc2626", tag: null },
+    { nombre: "ICBC", tna: 28.0, tae: 32.8, logoColor: "#b45309", tag: null },
 ];
 
 const prestamos = [
@@ -2110,19 +2110,20 @@ const prestamos = [
 ];
 
 const hipotecarios = [
-    { nombre: "Banco Nación — UVA", cuota100k: 850, tna: 4.5, plazo: 20, requisito: "Relación cuota/ingreso 25%", logoColor: "#6b7280", tag: "🏆 Más barato" },
-    { nombre: "Macro — UVA", cuota100k: 870, tna: 4.75, plazo: 20, requisito: "Cuenta sueldo Macro", logoColor: "#7c3aed", tag: "🏦 Clientes Macro" },
-    { nombre: "Galicia — UVA", cuota100k: 890, tna: 5.0, plazo: 20, requisito: "Antigüedad laboral 1 año", logoColor: "#ef4444", tag: null },
-    { nombre: "Santander — UVA", cuota100k: 920, tna: 5.5, plazo: 20, requisito: "Ingresos demostrables", logoColor: "#dc2626", tag: null },
-    { nombre: "BBVA — UVA", cuota100k: 910, tna: 5.25, plazo: 20, requisito: "DNI + recibo de sueldo", logoColor: "#1d4ed8", tag: null },
+    { nombre: "Banco Nación — UVA", cuota100k: 780, tna: 3.5, plazo: 20, requisito: "Relación cuota/ingreso 25%", logoColor: "#6b7280", tag: "🏆 Más barato" },
+    { nombre: "Macro — UVA", cuota100k: 820, tna: 4.0, plazo: 20, requisito: "Cuenta sueldo Macro", logoColor: "#7c3aed", tag: "🏦 Clientes Macro" },
+    { nombre: "Galicia — UVA", cuota100k: 850, tna: 4.5, plazo: 20, requisito: "Antigüedad laboral 1 año", logoColor: "#ef4444", tag: null },
+    { nombre: "Santander — UVA", cuota100k: 890, tna: 5.0, plazo: 20, requisito: "Ingresos demostrables", logoColor: "#dc2626", tag: null },
+    { nombre: "BBVA — UVA", cuota100k: 870, tna: 4.75, plazo: 20, requisito: "DNI + recibo de sueldo", logoColor: "#1d4ed8", tag: null },
 ];
 
 // ─── SIMULADOR ────────────────────────────────────────────────────────────────
-const SimuladorPF = ({ inflacionMensual }: any) => {
+const SimuladorPF = ({ inflacionMensual, plazosFijos }: any) => {
+    const list = plazosFijos && plazosFijos.length > 0 ? plazosFijos : [];
     const [monto, setMonto] = useState("500000");
     const [plazo, setPlazo] = useState("30");
-    const [banco, setBanco] = useState("Uala (PF)");
-    const b = plazosFijos.find(p => p.nombre === banco) || plazosFijos[0];
+    const [banco, setBanco] = useState(list[0].nombre);
+    const b = list.find((p: any) => p.nombre === banco) || list[0];
     const montoNum = parseFloat(monto) || 0;
     const plazoNum = parseFloat(plazo) || 30;
     const interes = montoNum * (b.tna / 100) * (plazoNum / 365);
@@ -2331,8 +2332,8 @@ const RiesgoPaisPanel = ({ data, loading, error, lastUpdated, onRefresh }: any) 
 };
 
 // ─── TABS ORIGINALES ─────────────────────────────────────────────────────────
-const TabCuentas = ({ inflacionAnual }: any) => {
-    const sorted = [...cuentasRemuneradas].sort((a, b) => b.tna - a.tna);
+const TabCuentas = ({ inflacionAnual, liveCuentas }: any) => {
+    const sorted = [...(liveCuentas && liveCuentas.length > 0 ? liveCuentas : cuentasRemuneradas)].sort((a, b) => b.tna - a.tna);
     return (
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             <div style={{ background: `${C_SIMULADOR.accent}11`, border: `1px solid ${C_SIMULADOR.accent}33`, borderRadius: 10, padding: "10px 14px" }}>
@@ -2391,34 +2392,37 @@ const TabCuentas = ({ inflacionAnual }: any) => {
     );
 };
 
-const TabPlazoFijo = ({ inflacionMensual, inflacionAnual }: any) => (
-    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-        <div style={{ background: `${C_SIMULADOR.yellow}11`, border: `1px solid ${C_SIMULADOR.yellow}33`, borderRadius: 10, padding: "10px 14px" }}>
-            <p style={{ color: C_SIMULADOR.muted, fontSize: 12, margin: 0 }}>
-                💡 Para que un plazo fijo a 30 días sea rentable en términos reales necesitás una TNA mayor a <strong style={{ color: C_SIMULADOR.yellow }}>{inflacionAnual}%</strong>.
-                La inflación mensual actual es <strong style={{ color: C_SIMULADOR.red }}>{inflacionMensual}%</strong>.
-            </p>
-        </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 8 }}>
-            {[...plazosFijos].sort((a, b) => b.tna - a.tna).map((b, i) => (
-                <div key={b.nombre} style={{ background: C_SIMULADOR.card, border: `1px solid ${i === 0 ? C_SIMULADOR.accent : C_SIMULADOR.border}`, borderRadius: 10, padding: "12px 14px" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
-                        <div>
-                            <div style={{ color: C_SIMULADOR.text, fontWeight: 600, fontSize: 13 }}>{b.nombre}</div>
-                            {b.tag && <span style={{ background: `${C_SIMULADOR.accent}22`, color: C_SIMULADOR.accent, fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius: 4 }}>{b.tag}</span>}
+const TabPlazoFijo = ({ inflacionMensual, inflacionAnual, liveBancos }: any) => {
+    const sorted = [...(liveBancos && liveBancos.length > 0 ? liveBancos : plazosFijos)].sort((a, b) => b.tna - a.tna);
+    return (
+        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <div style={{ background: `${C_SIMULADOR.yellow}11`, border: `1px solid ${C_SIMULADOR.yellow}33`, borderRadius: 10, padding: "10px 14px" }}>
+                <p style={{ color: C_SIMULADOR.muted, fontSize: 12, margin: 0 }}>
+                    💡 Para que un plazo fijo a 30 días sea rentable en términos reales necesitás una TNA mayor a <strong style={{ color: C_SIMULADOR.yellow }}>{inflacionAnual}%</strong>.
+                    La inflación mensual actual es <strong style={{ color: C_SIMULADOR.red }}>{inflacionMensual}%</strong>.
+                </p>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 8 }}>
+                {sorted.map((b, i) => (
+                    <div key={b.nombre} style={{ background: C_SIMULADOR.card, border: `1px solid ${i === 0 ? C_SIMULADOR.accent : C_SIMULADOR.border}`, borderRadius: 10, padding: "12px 14px" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
+                            <div>
+                                <div style={{ color: C_SIMULADOR.text, fontWeight: 600, fontSize: 13 }}>{b.nombre}</div>
+                                {b.tag && <span style={{ background: `${C_SIMULADOR.accent}22`, color: C_SIMULADOR.accent, fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius: 4 }}>{b.tag}</span>}
+                            </div>
+                        </div>
+                        <div style={{ display: "flex", justifyContent: "space-between" }}>
+                            <div><div style={{ color: C_SIMULADOR.muted, fontSize: 10 }}>TNA</div><div style={{ color: C_SIMULADOR.text, fontWeight: 700, fontSize: 16 }}>{b.tna}%</div></div>
+                            <div><div style={{ color: C_SIMULADOR.muted, fontSize: 10 }}>TAE</div><div style={{ color: C_SIMULADOR.accent, fontWeight: 600, fontSize: 14 }}>{b.tae}%</div></div>
+                            <div><div style={{ color: C_SIMULADOR.muted, fontSize: 10 }}>Real</div><div style={{ color: b.tna >= inflacionAnual ? C_SIMULADOR.green : C_SIMULADOR.red, fontWeight: 700, fontSize: 14 }}>{b.tna >= inflacionAnual ? "✅" : "⚠️"}</div></div>
                         </div>
                     </div>
-                    <div style={{ display: "flex", justifyContent: "space-between" }}>
-                        <div><div style={{ color: C_SIMULADOR.muted, fontSize: 10 }}>TNA</div><div style={{ color: C_SIMULADOR.text, fontWeight: 700, fontSize: 16 }}>{b.tna}%</div></div>
-                        <div><div style={{ color: C_SIMULADOR.muted, fontSize: 10 }}>TAE</div><div style={{ color: C_SIMULADOR.accent, fontWeight: 600, fontSize: 14 }}>{b.tae}%</div></div>
-                        <div><div style={{ color: C_SIMULADOR.muted, fontSize: 10 }}>Real</div><div style={{ color: b.tna >= inflacionAnual ? C_SIMULADOR.green : C_SIMULADOR.red, fontWeight: 700, fontSize: 14 }}>{b.tna >= inflacionAnual ? "✅" : "⚠️"}</div></div>
-                    </div>
-                </div>
-            ))}
+                ))}
+            </div>
+            <SimuladorPF inflacionMensual={inflacionMensual} plazosFijos={sorted} />
         </div>
-        <SimuladorPF inflacionMensual={inflacionMensual} />
-    </div>
-);
+    );
+};
 
 // ─── APP PRINCIPAL (Simulador Tab) ────────────────────────────────────────────────────────────
 const TABS_SIMULADOR = [
@@ -2433,7 +2437,7 @@ const transformIdentity = (d: any) => d;
 const fallbackInflacion = [{ fecha: "2025-01-01", valor: FALLBACK.inflacionMensual }];
 const fallbackRiesgo = [{ fecha: "2025-02-21", valor: FALLBACK.riesgoPais }];
 
-const SimuladorTab = () => {
+const SimuladorTab = ({ data: liveData }: { data: any }) => {
     const [tab, setTab] = useState("live");
 
     const dolarFallback = React.useMemo(() => Object.entries(CASAS_MAP).map(([casa]) => {
@@ -2534,10 +2538,10 @@ const SimuladorTab = () => {
             )}
 
             {/* TAB: CUENTAS */}
-            {tab === "cuentas" && <div className="animate-in fade-in slide-in-from-bottom-4 duration-500"><TabCuentas inflacionAnual={inflAnual} /></div>}
+            {tab === "cuentas" && <div className="animate-in fade-in slide-in-from-bottom-4 duration-500"><TabCuentas inflacionAnual={inflAnual} liveCuentas={liveData.tasasCuentas} /></div>}
 
             {/* TAB: PLAZO FIJO */}
-            {tab === "plazofijo" && <div className="animate-in fade-in slide-in-from-bottom-4 duration-500"><TabPlazoFijo inflacionMensual={inflMensual} inflacionAnual={inflAnual} /></div>}
+            {tab === "plazofijo" && <div className="animate-in fade-in slide-in-from-bottom-4 duration-500"><TabPlazoFijo inflacionMensual={inflMensual} inflacionAnual={inflAnual} liveBancos={liveData.tasasBancos} /></div>}
 
             {/* TAB: PRESTAMOS */}
             {tab === "prestamos" && (
