@@ -2126,11 +2126,12 @@ const prestamos = [
 ];
 
 const hipotecarios = [
-    { nombre: "Banco Nación — UVA", cuota100k: 780, tna: 3.5, plazo: 20, requisito: "Relación cuota/ingreso 25%", logoColor: "#6b7280", tag: "🏆 Más barato" },
-    { nombre: "Macro — UVA", cuota100k: 820, tna: 4.0, plazo: 20, requisito: "Cuenta sueldo Macro", logoColor: "#7c3aed", tag: "🏦 Clientes Macro" },
-    { nombre: "Galicia — UVA", cuota100k: 850, tna: 4.5, plazo: 20, requisito: "Antigüedad laboral 1 año", logoColor: "#ef4444", tag: null },
-    { nombre: "Santander — UVA", cuota100k: 890, tna: 5.0, plazo: 20, requisito: "Ingresos demostrables", logoColor: "#dc2626", tag: null },
-    { nombre: "BBVA — UVA", cuota100k: 870, tna: 4.75, plazo: 20, requisito: "DNI + recibo de sueldo", logoColor: "#1d4ed8", tag: null },
+    { nombre: "Banco Nación — UVA", cuota100k: 735, tna: 4.5, plazo: 20, requisito: "Cuenta sueldo BNA", logoColor: "#6b7280", tag: "🏆 Líder" },
+    { nombre: "BBVA — UVA", cuota100k: 920, tna: 7.5, plazo: 20, requisito: "Acredita haberes", logoColor: "#1d4ed8", tag: "🏦 Plan Sueldo" },
+    { nombre: "Banco Ciudad — UVA", cuota100k: 1150, tna: 12.0, plazo: 20, requisito: "Vivienda en CABA", logoColor: "#3b82f6", tag: "🏙️ Ciudad" },
+    { nombre: "Macro — UVA", cuota100k: 1240, tna: 14.0, plazo: 20, requisito: "Clientes Macro", logoColor: "#7c3aed", tag: "🤝 Preferencial" },
+    { nombre: "Santander — UVA", cuota100k: 1240, tna: 14.0, plazo: 20, requisito: "Relación dependencia", logoColor: "#dc2626", tag: null },
+    { nombre: "Galicia — UVA", cuota100k: 1315, tna: 15.0, plazo: 20, requisito: "Calificación crediticia", logoColor: "#ef4444", tag: null },
 ];
 
 // ─── SIMULADOR ────────────────────────────────────────────────────────────────
