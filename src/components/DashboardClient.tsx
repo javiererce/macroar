@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import {
     LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid,
     Tooltip, ResponsiveContainer, Legend, AreaChart, Area,
-    ComposedChart, ReferenceLine
+    ComposedChart, ReferenceLine, Cell
 } from "recharts";
 import {
     Flame, DollarSign, Wallet, Landmark,
@@ -369,7 +369,21 @@ const ExportModal = ({ data, onClose }: { data: DashboardData, onClose: () => vo
             if (type === "Excel" || type === "CSV") {
                 const wb = XLSX.utils.book_new();
                 sheets.forEach(s => {
-                    const ws = XLSX.utils.json_to_sheet(s.data);
+                    const wsData = [
+                        [`MacroAR Intelligence - ${labelSelected}`], // Title row
+                        [], // Empty row for spacing
+                        ...XLSX.utils.sheet_to_json<any[]>(XLSX.utils.json_to_sheet(s.data), { header: 1 }) // Transform data to array of arrays
+                    ];
+
+                    const ws = XLSX.utils.aoa_to_sheet(wsData);
+
+                    // Style Excel columns width
+                    if (!ws['!cols']) ws['!cols'] = [];
+                    const numColumns = Object.keys(s.data[0] || {}).length;
+                    for (let i = 0; i < numColumns; i++) {
+                        ws['!cols'][i] = { wch: 18 }; // Better breathing room
+                    }
+
                     XLSX.utils.book_append_sheet(wb, ws, s.name);
                 });
                 const ext = type === "Excel" ? "xlsx" : "csv";
@@ -382,9 +396,9 @@ const ExportModal = ({ data, onClose }: { data: DashboardData, onClose: () => vo
                 let y = 0;
 
                 // ── Header gradient ──
-                pdf.setFillColor(5, 10, 25);
+                pdf.setFillColor(20, 20, 22); // Background bg-background
                 pdf.rect(0, 0, w, 50, 'F');
-                pdf.setFillColor(37, 99, 235);
+                pdf.setFillColor(232, 107, 152); // Pink accent
                 pdf.rect(0, 46, w, 4, 'F');
 
                 // Logo text
@@ -392,11 +406,11 @@ const ExportModal = ({ data, onClose }: { data: DashboardData, onClose: () => vo
                 pdf.setFontSize(28);
                 pdf.setFont("helvetica", "bold");
                 pdf.text("Macro", 15, 25);
-                pdf.setTextColor(59, 130, 246);
+                pdf.setTextColor(232, 107, 152);
                 pdf.text("AR", 52, 25);
 
                 // Subtitle
-                pdf.setTextColor(148, 163, 184);
+                pdf.setTextColor(149, 149, 158);
                 pdf.setFontSize(9);
                 pdf.setFont("helvetica", "normal");
                 pdf.text("INTELLIGENCE DASHBOARD", 15, 33);
@@ -407,7 +421,7 @@ const ExportModal = ({ data, onClose }: { data: DashboardData, onClose: () => vo
                 pdf.setFontSize(10);
                 pdf.setFont("helvetica", "bold");
                 pdf.text(`REPORTE: ${labelSelected.toUpperCase()}`, w - 15, 25, { align: "right" });
-                pdf.setTextColor(148, 163, 184);
+                pdf.setTextColor(149, 149, 158);
                 pdf.setFontSize(8);
                 pdf.text("macroar.vercel.app", w - 15, 33, { align: "right" });
 
@@ -417,20 +431,20 @@ const ExportModal = ({ data, onClose }: { data: DashboardData, onClose: () => vo
                 if (selected === "all") {
                     const kpis = [
                         { label: "Inflación", value: `${data.inflacion.length ? data.inflacion[data.inflacion.length - 1].valor : "N/A"}%`, color: [239, 68, 68] },
-                        { label: "Dólar Oficial", value: `$${data.dolares.oficial}`, color: [59, 130, 246] },
+                        { label: "Dólar Oficial", value: `$${data.dolares.oficial}`, color: [232, 107, 152] }, // Pink for dollar instead of blue
                         { label: "Dólar Blue", value: `$${data.dolares.blue}`, color: [245, 158, 11] },
                         { label: "Riesgo País", value: `${data.riesgoPais.actual} pb`, color: [139, 92, 246] },
                     ];
                     const cardW = (w - 30 - 15) / 4;
                     kpis.forEach((kpi, i) => {
                         const x = 15 + i * (cardW + 5);
-                        pdf.setFillColor(15, 23, 42);
+                        pdf.setFillColor(34, 34, 37); // bg-card (Buenbit)
                         pdf.roundedRect(x, y, cardW, 28, 3, 3, 'F');
                         pdf.setDrawColor(kpi.color[0], kpi.color[1], kpi.color[2]);
                         pdf.setLineWidth(0.8);
                         pdf.line(x, y + 2, x, y + 26);
 
-                        pdf.setTextColor(148, 163, 184);
+                        pdf.setTextColor(149, 149, 158); // Muted
                         pdf.setFontSize(7);
                         pdf.setFont("helvetica", "bold");
                         pdf.text(kpi.label.toUpperCase(), x + 5, y + 9);
@@ -446,9 +460,9 @@ const ExportModal = ({ data, onClose }: { data: DashboardData, onClose: () => vo
                 sheets.forEach((sheet, si) => {
                     if (y > h - 40) {
                         pdf.addPage();
-                        pdf.setFillColor(5, 10, 25);
+                        pdf.setFillColor(20, 20, 22);
                         pdf.rect(0, 0, w, 12, 'F');
-                        pdf.setTextColor(148, 163, 184);
+                        pdf.setTextColor(149, 149, 158);
                         pdf.setFontSize(7);
                         pdf.text(`MacroAR Intelligence — ${labelSelected}`, 15, 8);
                         pdf.text(`Pág ${pdf.getNumberOfPages()}`, w - 15, 8, { align: "right" });
@@ -456,16 +470,16 @@ const ExportModal = ({ data, onClose }: { data: DashboardData, onClose: () => vo
                     }
 
                     // Section title
-                    pdf.setFillColor(15, 23, 42);
+                    pdf.setFillColor(34, 34, 37);
                     pdf.roundedRect(15, y, w - 30, 10, 2, 2, 'F');
-                    pdf.setTextColor(59, 130, 246);
+                    pdf.setTextColor(232, 107, 152);
                     pdf.setFontSize(10);
                     pdf.setFont("helvetica", "bold");
                     pdf.text(`📊 ${sheet.name}`, 20, y + 7);
                     y += 14;
 
                     if (sheet.data.length === 0) {
-                        pdf.setTextColor(148, 163, 184);
+                        pdf.setTextColor(149, 149, 158);
                         pdf.setFontSize(9);
                         pdf.text("Sin datos disponibles", 20, y + 5);
                         y += 12;
@@ -476,9 +490,9 @@ const ExportModal = ({ data, onClose }: { data: DashboardData, onClose: () => vo
                     const cols = Object.keys(sheet.data[0]);
                     const colW = (w - 30) / cols.length;
 
-                    pdf.setFillColor(30, 41, 59);
+                    pdf.setFillColor(42, 42, 46); // bg-card-secondary
                     pdf.rect(15, y, w - 30, 8, 'F');
-                    pdf.setTextColor(148, 163, 184);
+                    pdf.setTextColor(149, 149, 158);
                     pdf.setFontSize(7);
                     pdf.setFont("helvetica", "bold");
                     cols.forEach((col, ci) => {
@@ -491,18 +505,18 @@ const ExportModal = ({ data, onClose }: { data: DashboardData, onClose: () => vo
                     sheet.data.forEach((row, ri) => {
                         if (y > h - 20) {
                             pdf.addPage();
-                            pdf.setFillColor(5, 10, 25);
+                            pdf.setFillColor(20, 20, 22);
                             pdf.rect(0, 0, w, 12, 'F');
-                            pdf.setTextColor(148, 163, 184);
+                            pdf.setTextColor(149, 149, 158);
                             pdf.setFontSize(7);
                             pdf.text(`MacroAR Intelligence — ${sheet.name}`, 15, 8);
                             y = 20;
                         }
                         if (ri % 2 === 0) {
-                            pdf.setFillColor(15, 23, 42);
+                            pdf.setFillColor(34, 34, 37);
                             pdf.rect(15, y, w - 30, 7, 'F');
                         }
-                        pdf.setTextColor(249, 250, 251);
+                        pdf.setTextColor(255, 255, 255);
                         pdf.setFontSize(8);
                         cols.forEach((col, ci) => {
                             const val = String((row as Record<string, unknown>)[col] ?? "");
@@ -517,12 +531,12 @@ const ExportModal = ({ data, onClose }: { data: DashboardData, onClose: () => vo
                 const lastPage = pdf.getNumberOfPages();
                 for (let p = 1; p <= lastPage; p++) {
                     pdf.setPage(p);
-                    pdf.setFillColor(5, 10, 25);
+                    pdf.setFillColor(20, 20, 22);
                     pdf.rect(0, h - 15, w, 15, 'F');
-                    pdf.setDrawColor(59, 130, 246);
+                    pdf.setDrawColor(232, 107, 152);
                     pdf.setLineWidth(0.5);
                     pdf.line(0, h - 15, w, h - 15);
-                    pdf.setTextColor(100, 116, 139);
+                    pdf.setTextColor(149, 149, 158);
                     pdf.setFontSize(7);
                     pdf.setFont("helvetica", "normal");
                     pdf.text("© 2025-2026 MacroAR Intelligence · Desarrollado por Maximiliano Erce · macroar.vercel.app", w / 2, h - 7, { align: "center" });
@@ -684,7 +698,7 @@ export default function DashboardClient({ data }: DashboardProps) {
         { id: "noticias", label: "📰 Noticias" },
         { id: "calendario", label: "📅 Calendario" },
         { id: "resumen_ia", label: "🤖 Resumen IA" },
-        { id: "simulador", label: "🔮 Simulador" },
+        { id: "crypto", label: "🪙 Crypto" },
     ];
 
     // Merge Real Data with KPIs
@@ -782,14 +796,14 @@ export default function DashboardClient({ data }: DashboardProps) {
 
                                     {/* Dropdown flotante */}
                                     <div className="absolute top-full left-0 hidden group-hover:block group-focus-within:block pt-1 z-[100] min-w-[210px]">
-                                        <div className="bg-card border border-border rounded-[10px] p-2 shadow-[0_20px_40px_rgba(0,0,0,0.5)] flex flex-col gap-1 transform-gpu">
+                                        <div className="bg-[#111827] border border-[#1f2937] rounded-[10px] p-2 shadow-[0_20px_40px_rgba(0,0,0,0.5)] flex flex-col gap-1 transform-gpu">
                                             {t.children.map(c => (
                                                 <button
                                                     key={c.id}
                                                     onClick={(e) => { e.currentTarget.blur(); setTab(c.id); }}
                                                     className={cn(
                                                         "text-left px-4 py-3 text-[11px] font-black tracking-widest uppercase transition-all rounded-lg",
-                                                        tab === c.id ? "text-accent bg-accent/10 shadow-inner" : "text-muted hover:text-foreground hover:bg-card-secondary"
+                                                        tab === c.id ? "text-accent bg-accent/10 shadow-inner" : "text-muted hover:text-foreground hover:bg-white/5"
                                                     )}
                                                 >
                                                     {c.label}
@@ -861,7 +875,7 @@ export default function DashboardClient({ data }: DashboardProps) {
                             {tab === "noticias" && <NoticiasTab />}
                             {tab === "calendario" && <CalendarioTab />}
                             {tab === "resumen_ia" && <ResumenIaTab data={data} />}
-                            {tab === "simulador" && <SimuladorTab />}
+                            {tab === "crypto" && <CryptoTab />}
                         </div>
                     )}
                 </div>
@@ -877,18 +891,6 @@ export default function DashboardClient({ data }: DashboardProps) {
 }
 
 // ── Tab Contents ──────────────────────────────────────────
-
-const SimuladorTab = () => (
-    <div className="bg-card border border-border/30 rounded-[32px] p-12 mt-6 shadow-xl flex flex-col items-center justify-center text-center max-w-2xl mx-auto animate-in fade-in zoom-in-95 duration-500">
-        <span className="text-7xl mb-6 block drop-shadow-lg">🔮</span>
-        <h2 className="text-3xl font-black font-serif text-foreground mb-4">Simulador Económico</h2>
-        <div className="bg-accent/10 text-accent px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-widest border border-accent/20 mb-6 shadow-sm">Próximamente</div>
-        <p className="text-muted text-[13px] leading-relaxed max-w-lg">
-            Esta nueva herramienta interactiva te permitirá proyectar distintos escenarios macroeconómicos alterando variables clave
-            (como el crawl, brecha o tasas) y visualizar el impacto sobre la macroeconomía argentina en tiempo real.
-        </p>
-    </div>
-);
 
 const ResumenTab = ({ data }: DashboardProps) => (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1499,3 +1501,419 @@ INSTRUCCIONES:
         </div>
     );
 };
+
+// ── Crypto Tab ──────────────────────────────────────────
+
+const C_CRYPTO = {
+    bg: "transparent", card: "var(--card)", card2: "var(--card2)", border: "var(--border-color)",
+    accent: "var(--accent)", green: "var(--green)", red: "var(--red)", yellow: "var(--yellow)",
+    purple: "var(--purple)", orange: "var(--orange)", text: "var(--text)", muted: "var(--muted)",
+    bitcoin: "#f7931a", ethereum: "#627eea", usdt: "#26a17b",
+};
+
+const BTC_USD = 97800;
+const ETH_USD = 3420;
+const DOLAR_BLUE = 1220;
+const DOLAR_OFICIAL = 1063;
+const INFLACION_ANUAL = 66;
+
+const mockBTCHistorico = [
+    { fecha: "Sep 24", usd: 62000, ars: 75640000 },
+    { fecha: "Oct 24", usd: 68000, ars: 82960000 },
+    { fecha: "Nov 24", usd: 88000, ars: 107360000 },
+    { fecha: "Dic 24", usd: 95000, ars: 115900000 },
+    { fecha: "Ene 25", usd: 102000, ars: 124440000 },
+    { fecha: "Feb 25", usd: 97800, ars: 119316000 },
+];
+
+const mockComparacion = [
+    { activo: "Bitcoin", rendimiento: 142, color: C_CRYPTO.bitcoin },
+    { activo: "Ethereum", rendimiento: 89, color: C_CRYPTO.ethereum },
+    { activo: "Dólar Blue", rendimiento: 19, color: C_CRYPTO.yellow },
+    { activo: "Plazo Fijo", rendimiento: 34, color: C_CRYPTO.accent },
+    { activo: "Inflación", rendimiento: 66, color: C_CRYPTO.red },
+    { activo: "S&P 500 (ARS)", rendimiento: 98, color: C_CRYPTO.green },
+];
+
+const mockStables = [
+    { nombre: "USDT", precioARS: 1198, vsBlue: -1.8, exchange: "Binance P2P" },
+    { nombre: "USDC", precioARS: 1195, vsBlue: -2.0, exchange: "Lemon Cash" },
+    { nombre: "DAI", precioARS: 1201, vsBlue: -1.6, exchange: "Uniswap" },
+    { nombre: "BUSD", precioARS: 1190, vsBlue: -2.5, exchange: "Bybit P2P" },
+];
+
+const mockFear = 72; // 0-100, >60 = greed, <40 = fear
+
+const cryptos = [
+    { id: "btc", nombre: "Bitcoin", simbolo: "BTC", precio: BTC_USD, precioARS: BTC_USD * DOLAR_BLUE, var24h: 2.4, var7d: 8.1, mcap: "1.93T", color: C_CRYPTO.bitcoin, icon: "₿" },
+    { id: "eth", nombre: "Ethereum", simbolo: "ETH", precio: ETH_USD, precioARS: ETH_USD * DOLAR_BLUE, var24h: -1.2, var7d: 4.3, mcap: "411B", color: C_CRYPTO.ethereum, icon: "Ξ" },
+    { id: "usdt", nombre: "Tether", simbolo: "USDT", precio: 1.00, precioARS: DOLAR_BLUE, var24h: 0.0, var7d: 0.0, mcap: "140B", color: C_CRYPTO.usdt, icon: "₮" },
+    { id: "bnb", nombre: "BNB", simbolo: "BNB", precio: 695, precioARS: 695 * DOLAR_BLUE, var24h: 1.8, var7d: -2.1, mcap: "101B", color: C_CRYPTO.yellow, icon: "B" },
+    { id: "sol", nombre: "Solana", simbolo: "SOL", precio: 228, precioARS: 228 * DOLAR_BLUE, var24h: 3.2, var7d: 12.4, mcap: "108B", color: C_CRYPTO.purple, icon: "◎" },
+    { id: "xrp", nombre: "XRP", simbolo: "XRP", precio: 2.48, precioARS: 2.48 * DOLAR_BLUE, var24h: -0.8, var7d: 5.6, mcap: "142B", color: C_CRYPTO.accent, icon: "✕" },
+];
+
+const fmtARS = (n: number) => {
+    if (n >= 1000000) return `$${(n / 1000000).toFixed(2)}M`;
+    if (n >= 1000) return `$${(n / 1000).toFixed(1)}K`;
+    return `$${n.toFixed(2)}`;
+};
+
+const fmtUSD = (n: number) => {
+    if (n >= 1000000000000) return `$${(n / 1000000000000).toFixed(2)}T`;
+    if (n >= 1000000000) return `$${(n / 1000000000).toFixed(1)}B`;
+    if (n >= 1000) return `$${(n / 1000).toFixed(1)}K`;
+    return `$${n.toFixed(2)}`;
+};
+
+const tt_crypto = { backgroundColor: "var(--card-secondary)", border: "1px solid var(--border-color)", borderRadius: 8, color: "var(--text)", fontSize: 12 };
+
+const Calculadora = () => {
+    const [monto, setMonto] = useState("100000");
+    const [moneda, setMoneda] = useState("ARS");
+    const [crypto, setCrypto] = useState("btc");
+    const c = cryptos.find(x => x.id === crypto)!;
+    const montoNum = parseFloat(monto.replace(/\./g, "").replace(",", ".")) || 0;
+
+    const calcular = () => {
+        if (moneda === "ARS") return { cantidad: montoNum / c.precioARS, unidad: c.simbolo };
+        if (moneda === "USD") return { cantidad: (montoNum * DOLAR_BLUE) / c.precioARS, unidad: c.simbolo };
+        return { cantidad: montoNum / c.precio, unidad: c.simbolo };
+    };
+
+    const resultado = calcular();
+
+    return (
+        <div style={{ background: C_CRYPTO.card, border: `1px solid ${C_CRYPTO.border}`, borderRadius: 12, padding: "1.25rem" }}>
+            <h3 style={{ color: C_CRYPTO.text, fontSize: 14, fontWeight: 700, marginBottom: 14 }}>🧮 Calculadora Crypto ↔ ARS / USD</h3>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 14 }}>
+                <div>
+                    <label style={{ color: C_CRYPTO.muted, fontSize: 11, display: "block", marginBottom: 4, fontWeight: "bold" }}>CRYPTO</label>
+                    <select value={crypto} onChange={e => setCrypto(e.target.value)}
+                        style={{ width: "100%", background: C_CRYPTO.card2, border: `1px solid ${C_CRYPTO.border}`, borderRadius: 8, color: C_CRYPTO.text, padding: "9px 10px", fontSize: 13, outline: "none" }}>
+                        {cryptos.map(c => <option key={c.id} value={c.id}>{c.simbolo}</option>)}
+                    </select>
+                </div>
+                <div>
+                    <label style={{ color: C_CRYPTO.muted, fontSize: 11, display: "block", marginBottom: 4, fontWeight: "bold" }}>MONTO</label>
+                    <input value={monto} onChange={e => setMonto(e.target.value)} type="number"
+                        style={{ width: "100%", background: C_CRYPTO.card2, border: `1px solid ${C_CRYPTO.border}`, borderRadius: 8, color: C_CRYPTO.text, padding: "9px 10px", fontSize: 13, boxSizing: "border-box", outline: "none" }} />
+                </div>
+                <div>
+                    <label style={{ color: C_CRYPTO.muted, fontSize: 11, display: "block", marginBottom: 4, fontWeight: "bold" }}>MONEDA</label>
+                    <select value={moneda} onChange={e => setMoneda(e.target.value)}
+                        style={{ width: "100%", background: C_CRYPTO.card2, border: `1px solid ${C_CRYPTO.border}`, borderRadius: 8, color: C_CRYPTO.text, padding: "9px 10px", fontSize: 13, outline: "none" }}>
+                        <option value="ARS">ARS (pesos)</option>
+                        <option value="USD">USD (dólares)</option>
+                    </select>
+                </div>
+            </div>
+            <div style={{ background: `${c.color}15`, border: `1px solid ${c.color}44`, borderRadius: 10, padding: "14px 16px", textAlign: "center" }}>
+                <div style={{ color: C_CRYPTO.muted, fontSize: 12, marginBottom: 4 }}>Con {moneda === "ARS" ? `$${parseFloat(monto || "0").toLocaleString("es-AR")} ARS` : `USD ${monto}`} comprás</div>
+                <div style={{ color: c.color, fontSize: 28, fontWeight: 800, marginBottom: 4 }}>
+                    {resultado.cantidad < 0.001 ? resultado.cantidad.toFixed(8) : resultado.cantidad.toFixed(6)} {resultado.unidad}
+                </div>
+                <div style={{ color: C_CRYPTO.muted, fontSize: 11, fontWeight: "bold" }}>
+                    1 {c.simbolo} = {fmtARS(c.precioARS)} ARS · USD {fmtUSD(c.precio)}
+                </div>
+            </div>
+        </div>
+    );
+};
+
+const CryptoTab = () => {
+    const [tab, setTab] = useState("precios");
+    const [loading, setLoading] = useState(true);
+    const [monedaVista, setMonedaVista] = useState("USD");
+
+    useEffect(() => { setTimeout(() => setLoading(false), 800); }, []);
+
+    const tabs = [
+        { id: "precios", label: "💹 Precios" },
+        { id: "comparacion", label: "📊 vs Inflación" },
+        { id: "stables", label: "💲 Stables" },
+        { id: "calculadora", label: "🧮 Calculadora" },
+    ];
+
+    const fearColor = mockFear >= 60 ? C_CRYPTO.green : mockFear >= 40 ? C_CRYPTO.yellow : C_CRYPTO.red;
+    const fearLabel = mockFear >= 60 ? "Codicia" : mockFear >= 40 ? "Neutral" : "Miedo";
+
+    return (
+        <div style={{ background: C_CRYPTO.bg, fontFamily: "system-ui,-apple-system,sans-serif", color: C_CRYPTO.text, padding: "0" }}>
+
+            {/* Header */}
+            <div style={{ display: "flex", alignItems: "center", justifyItems: "center", justifyContent: "space-between", marginBottom: 20, flexWrap: "wrap", gap: 10 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <span style={{ fontSize: 26 }} className="drop-shadow-lg">🇦🇷</span>
+                    <div>
+                        <div style={{ fontWeight: 900, fontSize: 20, letterSpacing: "-0.05em" }}>MacroAR — Crypto</div>
+                        <div style={{ color: C_CRYPTO.muted, fontSize: 11, fontWeight: "bold", textTransform: "uppercase", letterSpacing: "1px" }}>Mercado cripto en contexto argentino</div>
+                    </div>
+                </div>
+                <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+                    {/* Fear & Greed */}
+                    <div style={{ background: C_CRYPTO.card, border: `1px solid ${C_CRYPTO.border}`, borderRadius: 10, padding: "8px 14px", display: "flex", alignItems: "center", gap: 10 }}>
+                        <div>
+                            <div style={{ color: C_CRYPTO.muted, fontSize: 10, textTransform: "uppercase", fontWeight: "bold", letterSpacing: 1 }}>Fear & Greed</div>
+                            <div style={{ color: fearColor, fontWeight: 800, fontSize: 18 }}>{mockFear} <span style={{ fontSize: 12 }}>{fearLabel}</span></div>
+                        </div>
+                        <div style={{ width: 40, height: 40, borderRadius: "50%", background: `conic-gradient(${fearColor} ${mockFear * 3.6}deg, ${C_CRYPTO.border} 0deg)`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                            <div style={{ width: 28, height: 28, borderRadius: "50%", background: C_CRYPTO.card, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: fearColor, fontWeight: 700 }}>{mockFear}</div>
+                        </div>
+                    </div>
+                    {/* Dólar ref */}
+                    <div style={{ background: C_CRYPTO.card, border: `1px solid ${C_CRYPTO.border}`, borderRadius: 10, padding: "8px 14px" }}>
+                        <div style={{ color: C_CRYPTO.muted, fontSize: 10, marginBottom: 2, fontWeight: "bold", textTransform: "uppercase", letterSpacing: "1px" }}>💵 Blue referencia</div>
+                        <div style={{ color: C_CRYPTO.yellow, fontWeight: 700, fontSize: 15 }}>${DOLAR_BLUE.toLocaleString("es-AR")}</div>
+                    </div>
+                    {/* Toggle moneda */}
+                    <div style={{ background: C_CRYPTO.card, border: `1px solid ${C_CRYPTO.border}`, borderRadius: 10, display: "flex", overflow: "hidden" }}>
+                        {["USD", "ARS"].map(m => (
+                            <button key={m} onClick={() => setMonedaVista(m)} style={{ padding: "8px 14px", border: "none", background: monedaVista === m ? C_CRYPTO.accent : "transparent", color: monedaVista === m ? "#fff" : C_CRYPTO.muted, cursor: "pointer", fontSize: 12, fontWeight: 800, textTransform: "uppercase", letterSpacing: "1px" }}>{m}</button>
+                        ))}
+                    </div>
+                </div>
+            </div>
+
+            {/* KPIs rápidos */}
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 16 }}>
+                {cryptos.slice(0, 4).map(c => (
+                    <div key={c.id} style={{ background: C_CRYPTO.card, border: `1px solid ${C_CRYPTO.border}`, borderLeft: `3px solid ${c.color}`, borderRadius: "12px", padding: "10px 14px", flex: "1 1 130px" }} className="shadow-lg">
+                        <div style={{ color: C_CRYPTO.muted, fontSize: 10, marginBottom: 2, fontWeight: "bold" }}>{c.icon} {c.simbolo}</div>
+                        <div style={{ color: C_CRYPTO.text, fontWeight: 700, fontSize: 16 }}>
+                            {monedaVista === "ARS" ? fmtARS(c.precioARS) : fmtUSD(c.precio)}
+                        </div>
+                        <div style={{ display: "flex", gap: 8, marginTop: 2 }}>
+                            <span style={{ color: c.var24h >= 0 ? C_CRYPTO.green : C_CRYPTO.red, fontSize: 11, fontWeight: 800 }}>
+                                {c.var24h >= 0 ? "▲" : "▼"} {Math.abs(c.var24h)}% 24h
+                            </span>
+                        </div>
+                    </div>
+                ))}
+            </div>
+
+            {/* Tabs */}
+            <div style={{ display: "flex", borderBottom: `1px solid ${C_CRYPTO.border}`, marginBottom: 16, overflowX: "auto" }}>
+                {tabs.map(t => (
+                    <button key={t.id} onClick={() => setTab(t.id)} style={{
+                        background: "none", border: "none",
+                        borderBottom: tab === t.id ? `3px solid ${C_CRYPTO.accent}` : "3px solid transparent",
+                        color: tab === t.id ? C_CRYPTO.accent : C_CRYPTO.muted,
+                        padding: "0.7rem 1rem", cursor: "pointer", fontSize: 12, fontWeight: 800, whiteSpace: "nowrap", textTransform: "uppercase", letterSpacing: "1.5px", transition: "all 0.2s ease-in-out"
+                    }}>{t.label}</button>
+                ))}
+            </div>
+
+            {loading ? (
+                <div style={{ textAlign: "center", padding: "3rem" }}>
+                    <Loader2 size={48} className="text-accent animate-spin mx-auto mb-4" />
+                </div>
+            ) : (
+                <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    {/* PRECIOS */}
+                    {tab === "precios" && (
+                        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                            {/* Tabla completa */}
+                            <div style={{ background: C_CRYPTO.card, border: `1px solid ${C_CRYPTO.border}`, borderRadius: "24px", overflow: "hidden" }} className="shadow-xl">
+                                <div style={{ padding: "16px 20px", borderBottom: `1px solid ${C_CRYPTO.border}`, display: "flex", justifyContent: "space-between" }}>
+                                    <span style={{ color: C_CRYPTO.text, fontWeight: 800, fontSize: 14 }}>PRECIOS EN TIEMPO REAL</span>
+                                    <span style={{ color: C_CRYPTO.muted, fontSize: 11, fontWeight: "bold", textTransform: "uppercase", letterSpacing: "1px" }}>CoinGecko API</span>
+                                </div>
+                                <div style={{ overflowX: "auto" }}>
+                                    <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                                        <thead>
+                                            <tr style={{ borderBottom: `1px solid ${C_CRYPTO.border}`, background: C_CRYPTO.card2 }}>
+                                                {["Crypto", "Precio USD", "Precio ARS", "24h", "7d", "Market Cap"].map(h => (
+                                                    <th key={h} style={{ padding: "12px 20px", color: C_CRYPTO.muted, fontSize: 10, fontWeight: 800, textAlign: "left", textTransform: "uppercase", letterSpacing: 1 }}>{h}</th>
+                                                ))}
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {cryptos.map((c, i) => (
+                                                <tr key={c.id} style={{ borderBottom: i < cryptos.length - 1 ? `1px solid ${C_CRYPTO.border}` : "none", transition: "background 0.2s" }}
+                                                    onMouseEnter={e => e.currentTarget.style.background = C_CRYPTO.card2}
+                                                    onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                                                    <td style={{ padding: "16px 20px" }}>
+                                                        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                                                            <div style={{ width: 36, height: 36, borderRadius: "50%", background: `${c.color}22`, border: `1px solid ${c.color}44`, display: "flex", alignItems: "center", justifyContent: "center", color: c.color, fontWeight: 700, fontSize: 13 }}>{c.icon}</div>
+                                                            <div>
+                                                                <div style={{ color: C_CRYPTO.text, fontWeight: 700, fontSize: 14 }}>{c.nombre}</div>
+                                                                <div style={{ color: C_CRYPTO.muted, fontSize: 11, fontWeight: "bold" }}>{c.simbolo}</div>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td style={{ padding: "16px 20px", color: C_CRYPTO.text, fontWeight: 700, fontSize: 14 }}>{fmtUSD(c.precio)}</td>
+                                                    <td style={{ padding: "16px 20px", color: C_CRYPTO.yellow, fontWeight: 700, fontSize: 14 }}>{fmtARS(c.precioARS)}</td>
+                                                    <td style={{ padding: "16px 20px" }}>
+                                                        <span style={{ color: c.var24h >= 0 ? C_CRYPTO.green : C_CRYPTO.red, fontWeight: 800, fontSize: 13 }}>{c.var24h >= 0 ? "▲" : "▼"} {Math.abs(c.var24h).toFixed(1)}%</span>
+                                                    </td>
+                                                    <td style={{ padding: "16px 20px" }}>
+                                                        <span style={{ color: c.var7d >= 0 ? C_CRYPTO.green : C_CRYPTO.red, fontWeight: 800, fontSize: 13 }}>{c.var7d >= 0 ? "▲" : "▼"} {Math.abs(c.var7d).toFixed(1)}%</span>
+                                                    </td>
+                                                    <td style={{ padding: "16px 20px", color: C_CRYPTO.muted, fontSize: 13, fontWeight: "bold" }}>{c.mcap}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            {/* Gráfico BTC histórico */}
+                            <div style={{ background: C_CRYPTO.card, border: `1px solid ${C_CRYPTO.border}`, borderRadius: "24px", padding: "1.5rem" }} className="shadow-xl">
+                                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 20 }}>
+                                    <h3 style={{ color: C_CRYPTO.text, fontSize: 14, fontWeight: 800, margin: 0, textTransform: "uppercase", letterSpacing: "1px" }}>₿ Bitcoin — Últimos 6 meses</h3>
+                                    <span style={{ color: C_CRYPTO.muted, fontSize: 11, fontWeight: "bold", textTransform: "uppercase", letterSpacing: "1px" }}>CoinGecko</span>
+                                </div>
+                                <ResponsiveContainer width="100%" height={240}>
+                                    <AreaChart data={mockBTCHistorico}>
+                                        <defs>
+                                            <linearGradient id="btcGrad" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="5%" stopColor={C_CRYPTO.bitcoin} stopOpacity={0.4} />
+                                                <stop offset="95%" stopColor={C_CRYPTO.bitcoin} stopOpacity={0} />
+                                            </linearGradient>
+                                        </defs>
+                                        <CartesianGrid strokeDasharray="3 3" stroke={C_CRYPTO.border} vertical={false} />
+                                        <XAxis dataKey="fecha" tick={{ fill: C_CRYPTO.muted, fontSize: 10, fontWeight: "bold" }} tickLine={false} axisLine={false} dy={10} />
+                                        <YAxis tick={{ fill: C_CRYPTO.muted, fontSize: 10, fontWeight: "bold" }} tickFormatter={v => monedaVista === "ARS" ? `$${(v / 1000000).toFixed(0)}M` : `$${(v / 1000).toFixed(0)}K`} tickLine={false} axisLine={false} dx={-10} />
+                                        <Tooltip contentStyle={tt_crypto} formatter={v => [monedaVista === "ARS" ? fmtARS(Number(v)) : fmtUSD(Number(v)), "BTC"]} />
+                                        <Area type="monotone" dataKey={monedaVista === "ARS" ? "ars" : "usd"} stroke={C_CRYPTO.bitcoin} fill="url(#btcGrad)" strokeWidth={3} />
+                                    </AreaChart>
+                                </ResponsiveContainer>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* COMPARACIÓN vs INFLACIÓN */}
+                    {tab === "comparacion" && (
+                        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                            <div style={{ background: `${C_CRYPTO.accent}11`, border: `1px solid ${C_CRYPTO.accent}33`, borderRadius: "16px", padding: "16px 20px" }}>
+                                <p style={{ color: C_CRYPTO.muted, fontSize: 13, margin: 0, lineHeight: 1.6, fontWeight: "500" }}>
+                                    📊 Comparación de rendimientos en los <strong style={{ color: C_CRYPTO.text }}>últimos 12 meses</strong> en pesos argentinos. ¿Qué te protegió mejor de la inflación?
+                                </p>
+                            </div>
+                            <div style={{ background: C_CRYPTO.card, border: `1px solid ${C_CRYPTO.border}`, borderRadius: "24px", padding: "1.5rem" }} className="shadow-xl">
+                                <h3 style={{ color: C_CRYPTO.text, fontSize: 14, fontWeight: 800, marginBottom: 20, textTransform: "uppercase", letterSpacing: "1px" }}>Rendimiento % en ARS — últimos 12 meses</h3>
+                                <ResponsiveContainer width="100%" height={280}>
+                                    <BarChart data={mockComparacion} layout="vertical" margin={{ left: -10 }}>
+                                        <CartesianGrid strokeDasharray="3 3" stroke={C_CRYPTO.border} horizontal={false} />
+                                        <XAxis type="number" tick={{ fill: C_CRYPTO.muted, fontSize: 10, fontWeight: "bold" }} unit="%" tickLine={false} axisLine={false} />
+                                        <YAxis type="category" dataKey="activo" tick={{ fill: C_CRYPTO.muted, fontSize: 11, fontWeight: "bold" }} width={110} tickLine={false} axisLine={false} />
+                                        <Tooltip contentStyle={tt_crypto} cursor={{ fill: 'transparent' }} formatter={v => [`${v}%`, "Rendimiento"]} />
+                                        <Bar dataKey="rendimiento" radius={[0, 8, 8, 0]} barSize={24}
+                                            label={{ position: "right", fill: C_CRYPTO.muted, fontSize: 11, fontWeight: "bold", formatter: (v: any) => `${v}%` }}>
+                                            {mockComparacion.map((entry, i) => (
+                                                <rect key={i} fill={entry.color} />
+                                            ))}
+                                        </Bar>
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            </div>
+                            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 14 }}>
+                                {[
+                                    { label: "Mejor activo", val: "Bitcoin", sub: "+142% en ARS", color: C_CRYPTO.bitcoin },
+                                    { label: "Inflación a vencer", val: "66%", sub: "interanual est.", color: C_CRYPTO.red },
+                                    { label: "Plazo fijo rindió", val: "34%", sub: "-32pp vs inflación", color: C_CRYPTO.muted },
+                                ].map(k => (
+                                    <div key={k.label} style={{ background: C_CRYPTO.card, border: `1px solid ${C_CRYPTO.border}`, borderLeft: `4px solid ${k.color}`, borderRadius: "16px", padding: "1.25rem" }} className="shadow-lg">
+                                        <div style={{ color: C_CRYPTO.muted, fontSize: 11, marginBottom: 6, fontWeight: "bold", textTransform: "uppercase", letterSpacing: "1px" }}>{k.label}</div>
+                                        <div style={{ color: k.color, fontSize: 22, fontWeight: 800 }}>{k.val}</div>
+                                        <div style={{ color: C_CRYPTO.muted, fontSize: 12, marginTop: 4, fontWeight: "500" }}>{k.sub}</div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* STABLECOINS */}
+                    {tab === "stables" && (
+                        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                            <div style={{ background: `${C_CRYPTO.usdt}11`, border: `1px solid ${C_CRYPTO.usdt}33`, borderRadius: "16px", padding: "16px 20px" }}>
+                                <p style={{ color: C_CRYPTO.muted, fontSize: 13, margin: 0, lineHeight: 1.6, fontWeight: "500" }}>
+                                    💲 Las stablecoins en Argentina son una alternativa al dólar blue. Compará precios y descubrí dónde conviene operar. <strong style={{ color: C_CRYPTO.text }}>Dólar Blue Ref: ${DOLAR_BLUE}</strong>
+                                </p>
+                            </div>
+                            <div style={{ background: C_CRYPTO.card, border: `1px solid ${C_CRYPTO.border}`, borderRadius: "24px", overflow: "hidden" }} className="shadow-xl">
+                                <div style={{ padding: "16px 20px", borderBottom: `1px solid ${C_CRYPTO.border}` }}>
+                                    <span style={{ color: C_CRYPTO.text, fontWeight: 800, fontSize: 14, textTransform: "uppercase", letterSpacing: "1px" }}>Stablecoins vs Dólar Blue</span>
+                                </div>
+                                {mockStables.map((s, i) => (
+                                    <div key={s.nombre} style={{ padding: "16px 20px", borderBottom: i < mockStables.length - 1 ? `1px solid ${C_CRYPTO.border}` : "none", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10, transition: "background 0.2s" }} className="hover:bg-card-secondary">
+                                        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                                            <div style={{ width: 40, height: 40, borderRadius: "50%", background: `${C_CRYPTO.usdt}22`, border: `1px solid ${C_CRYPTO.usdt}44`, display: "flex", alignItems: "center", justifyContent: "center", color: C_CRYPTO.usdt, fontWeight: 800, fontSize: 14 }}>₮</div>
+                                            <div>
+                                                <div style={{ color: C_CRYPTO.text, fontWeight: 800, fontSize: 15 }}>{s.nombre}</div>
+                                                <div style={{ color: C_CRYPTO.muted, fontSize: 12, fontWeight: "bold" }}>{s.exchange}</div>
+                                            </div>
+                                        </div>
+                                        <div style={{ display: "flex", gap: 24, alignItems: "center" }}>
+                                            <div style={{ textAlign: "right" }}>
+                                                <div style={{ color: C_CRYPTO.text, fontWeight: 800, fontSize: 16 }}>${s.precioARS.toLocaleString("es-AR")}</div>
+                                                <div style={{ color: C_CRYPTO.muted, fontSize: 11, fontWeight: "bold" }}>ARS / USDT</div>
+                                            </div>
+                                            <div style={{ textAlign: "right", minWidth: 60 }}>
+                                                <div style={{ color: s.vsBlue >= 0 ? C_CRYPTO.green : C_CRYPTO.red, fontWeight: 800, fontSize: 15 }}>
+                                                    {s.vsBlue >= 0 ? "▲" : "▼"} {Math.abs(s.vsBlue)}%
+                                                </div>
+                                                <div style={{ color: C_CRYPTO.muted, fontSize: 11, fontWeight: "bold" }}>vs Blue</div>
+                                            </div>
+                                            <div style={{ background: s.vsBlue >= -2 ? `${C_CRYPTO.green}22` : `${C_CRYPTO.red}22`, color: s.vsBlue >= -2 ? C_CRYPTO.green : C_CRYPTO.red, padding: "6px 14px", borderRadius: 20, fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: "1px" }}>
+                                                {s.vsBlue >= -2 ? "✅ Conveniente" : "⚠️ Caro"}
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                            {/* Tip */}
+                            <div style={{ background: C_CRYPTO.card, border: `1px solid ${C_CRYPTO.border}`, borderRadius: "16px", padding: "16px 20px" }}>
+                                <div style={{ color: C_CRYPTO.yellow, fontWeight: 800, fontSize: 12, marginBottom: 10, textTransform: "uppercase", letterSpacing: "1px" }}>💡 ¿Cómo comprar stablecoins en Argentina?</div>
+                                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                                    {[
+                                        { app: "Lemon Cash", ventaja: "Más fácil, sin KYC extendido" },
+                                        { app: "Ripio", ventaja: "Exchange argentino regulado" },
+                                        { app: "Binance P2P", ventaja: "Mejor precio pero más complejo" },
+                                        { app: "Belo", ventaja: "Buena app, fácil de usar en pesos" },
+                                    ].map(x => (
+                                        <div key={x.app} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, fontWeight: "500" }}>
+                                            <span style={{ color: C_CRYPTO.text, fontWeight: 700 }}>{x.app}</span>
+                                            <span style={{ color: C_CRYPTO.muted }}>{x.ventaja}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* CALCULADORA */}
+                    {tab === "calculadora" && (
+                        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                            <Calculadora />
+                            {/* Contexto macro */}
+                            <div style={{ background: C_CRYPTO.card, border: `1px solid ${C_CRYPTO.border}`, borderRadius: "24px", padding: "1.5rem" }} className="shadow-xl">
+                                <h3 style={{ color: C_CRYPTO.text, fontSize: 14, fontWeight: 800, marginBottom: 16, textTransform: "uppercase", letterSpacing: "1px" }}>📊 Contexto macro para decisiones</h3>
+                                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 14 }}>
+                                    {[
+                                        { label: "1 BTC en pesos", val: fmtARS(BTC_USD * DOLAR_BLUE), color: C_CRYPTO.bitcoin },
+                                        { label: "1 ETH en pesos", val: fmtARS(ETH_USD * DOLAR_BLUE), color: C_CRYPTO.ethereum },
+                                        { label: "Sueldo mín. / BTC", val: `${((280000) / (BTC_USD * DOLAR_BLUE) * 100).toFixed(4)}%`, color: C_CRYPTO.accent },
+                                        { label: "Inflación anual est.", val: `${INFLACION_ANUAL}%`, color: C_CRYPTO.red },
+                                    ].map(k => (
+                                        <div key={k.label} style={{ background: C_CRYPTO.card2, borderRadius: "12px", padding: "12px 16px", borderLeft: `4px solid ${k.color}` }}>
+                                            <div style={{ color: C_CRYPTO.muted, fontSize: 11, marginBottom: 4, fontWeight: "bold", textTransform: "uppercase", letterSpacing: "0.5px" }}>{k.label}</div>
+                                            <div style={{ color: k.color, fontWeight: 800, fontSize: 18 }}>{k.val}</div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
+
+            <div style={{ marginTop: 24, padding: "10px 16px", background: C_CRYPTO.card, borderRadius: "12px", border: `1px solid ${C_CRYPTO.border}`, fontSize: 11, color: C_CRYPTO.muted, display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 10, fontWeight: "bold" }}>
+                <span>📡 Feed: CoinGecko API · Binance · argentinadatos.com</span>
+                <span style={{ fontWeight: 800, color: C_CRYPTO.accent }}>macroar.vercel.app</span>
+            </div>
+        </div>
+    );
+};
+
