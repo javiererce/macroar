@@ -951,7 +951,7 @@ export default function DashboardClient({ data: initialData }: DashboardProps) {
                             {tab === "noticias" && <NoticiasTab />}
                             {tab === "calendario" && <CalendarioTab />}
                             {tab === "resumen_ia" && <ResumenIaTab data={data} />}
-                            {tab === "crypto" && <CryptoTab data={data} />}
+                            {tab === "crypto" && <CryptoTab data={data} live={live} />}
                             {tab === "simulador" && <SimuladorTab data={data} />}
                         </div>
                     )}
@@ -1731,7 +1731,7 @@ const Calculadora = ({ cryptos, blue }: { cryptos: any[], blue: number }) => {
     );
 };
 
-const CryptoTab = ({ data }: { data: DashboardData }) => {
+const CryptoTab = ({ data, live }: { data: DashboardData, live: any }) => {
     const blue = data.dolares.blue;
     const [tab, setTab] = useState("precios");
     const [monedaVista, setMonedaVista] = useState("USD");
@@ -1781,7 +1781,7 @@ const CryptoTab = ({ data }: { data: DashboardData }) => {
                 </div>
 
                 <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-                    <StatusBadge loading={coinsPool.loading} error={coinsPool.error} lastUpdated={coinsPool.lastUpdated} onRefresh={coinsPool.refresh} />
+                    <StatusBadge loading={live.loading} error={live.error} lastUpdated={live.lastUpdated} onRefresh={live.refresh} />
 
                     <div style={{ background: C_CRYPTO.card, border: `1px solid ${C_CRYPTO.border}`, borderRadius: "14px", padding: "8px 14px", display: "flex", alignItems: "center", gap: 12 }} className="shadow-lg">
                         <div>
@@ -1831,7 +1831,7 @@ const CryptoTab = ({ data }: { data: DashboardData }) => {
                 ))}
             </div>
 
-            {coinsPool.loading ? (
+            {live.loading ? (
                 <div style={{ textAlign: "center", padding: "3rem" }}>
                     <Loader2 size={48} className="text-accent animate-spin mx-auto mb-4" />
                 </div>
@@ -2147,7 +2147,7 @@ const hipotecarios = [
 
 // ─── SIMULADOR ────────────────────────────────────────────────────────────────
 const SimuladorPF = ({ inflacionMensual, plazosFijos }: any) => {
-    const list = plazosFijos && plazosFijos.length > 0 ? plazosFijos : [];
+    const list = plazosFijos && plazosFijos.length > 0 ? plazosFijos : [{ nombre: "Sin datos", tna: 30 }];
     const [monto, setMonto] = useState("500000");
     const [plazo, setPlazo] = useState("30");
     const [banco, setBanco] = useState(list[0].nombre);

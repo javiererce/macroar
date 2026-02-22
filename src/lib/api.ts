@@ -5,6 +5,7 @@
 // Fuente secundaria: datos.gob.ar (INDEC)
 
 const ARGDATA = "https://api.argentinadatos.com/v1";
+console.log("MacroAR API Lib - Internal Initialized");
 
 function withTimeout(ms = 8000): { signal: AbortSignal; clear: () => void } {
     const controller = new AbortController();
@@ -256,22 +257,15 @@ export async function getTasaBadlar() {
 
 // ── Cryptos (CoinCap) ───────────────────────────────────────
 export async function getCryptoPrices() {
-    const t = withTimeout();
+    console.log(">>> Fetching Crypto Prices from CoinCap...");
     try {
         const res = await fetch('https://api.coincap.io/v2/assets?ids=bitcoin,ethereum,tether,binance-coin,solana,ripple', {
-            next: { revalidate: 60 }, // Actualizar cada minuto
-            signal: t.signal,
+            cache: 'no-store'
         });
-        t.clear();
-        if (!res.ok) {
-            console.error(`[getCryptoPrices] API error: ${res.status}`);
-            return [];
-        }
+        if (!res.ok) return [];
         const json = await res.json();
         return json.data || [];
     } catch (e) {
-        t.clear();
-        console.error("[getCryptoPrices] Error:", e);
         return [];
     }
 }

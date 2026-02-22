@@ -24,8 +24,8 @@ export const metadata = {
 
 // Componente servidor: fetcha todos los datos antes de renderizar
 export default async function HomePage() {
-  // Fetch paralelo de todas las APIs
-  const [inflacion, reservas, riesgoPais, dolares, dolarHistorico, tasaBadlar, tasasBancos, tasasCuentas, cryptos] = await Promise.allSettled([
+  // Fetch paralelo de todas las APIs con manejo de errores ultra-seguro
+  const results = await Promise.allSettled([
     getInflacion(),
     getReservas(),
     getRiesgoPais(),
@@ -37,17 +37,21 @@ export default async function HomePage() {
     getCryptoPrices(),
   ]);
 
+  const [inflacion, reservas, riesgoPais, dolares, dolarHistorico, tasaBadlar, tasasBancos, tasasCuentas, cryptos] = results.map(r =>
+    r.status === "fulfilled" ? r.value : null
+  );
+
   // Extraer valores con fallbacks seguros
   const data: any = {
-    inflacion: inflacion.status === "fulfilled" ? inflacion.value : [],
-    reservas: reservas.status === "fulfilled" ? reservas.value : [],
-    riesgoPais: riesgoPais.status === "fulfilled" ? riesgoPais.value : { actual: 620, historico: [] },
-    dolares: dolares.status === "fulfilled" ? dolares.value : { oficial: 1063, blue: 1220, mep: 1198, ccl: 1205 },
-    dolarHistorico: dolarHistorico.status === "fulfilled" ? dolarHistorico.value : [],
-    tasaBadlar: tasaBadlar.status === "fulfilled" ? tasaBadlar.value : 34.5,
-    tasasBancos: tasasBancos.status === "fulfilled" ? tasasBancos.value : [],
-    tasasCuentas: tasasCuentas.status === "fulfilled" ? tasasCuentas.value : [],
-    cryptos: cryptos.status === "fulfilled" ? cryptos.value : [],
+    inflacion: inflacion ?? [],
+    reservas: reservas ?? [],
+    riesgoPais: riesgoPais ?? { actual: 620, historico: [] },
+    dolares: dolares ?? { oficial: 1063, blue: 1220, mep: 1198, ccl: 1205 },
+    dolarHistorico: dolarHistorico ?? [],
+    tasaBadlar: tasaBadlar ?? 34.5,
+    tasasBancos: tasasBancos ?? [],
+    tasasCuentas: tasasCuentas ?? [],
+    cryptos: cryptos ?? [],
     lastUpdate: new Date().toISOString(),
   };
 
