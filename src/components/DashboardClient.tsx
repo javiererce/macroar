@@ -782,14 +782,14 @@ export default function DashboardClient({ data }: DashboardProps) {
 
                                     {/* Dropdown flotante */}
                                     <div className="absolute top-full left-0 hidden group-hover:block group-focus-within:block pt-1 z-[100] min-w-[210px]">
-                                        <div className="bg-[#111827] border border-[#1f2937] rounded-[10px] p-2 shadow-[0_20px_40px_rgba(0,0,0,0.5)] flex flex-col gap-1 transform-gpu">
+                                        <div className="bg-card border border-border rounded-[10px] p-2 shadow-[0_20px_40px_rgba(0,0,0,0.5)] flex flex-col gap-1 transform-gpu">
                                             {t.children.map(c => (
                                                 <button
                                                     key={c.id}
                                                     onClick={(e) => { e.currentTarget.blur(); setTab(c.id); }}
                                                     className={cn(
                                                         "text-left px-4 py-3 text-[11px] font-black tracking-widest uppercase transition-all rounded-lg",
-                                                        tab === c.id ? "text-accent bg-accent/10 shadow-inner" : "text-muted hover:text-foreground hover:bg-white/5"
+                                                        tab === c.id ? "text-accent bg-accent/10 shadow-inner" : "text-muted hover:text-foreground hover:bg-card-secondary"
                                                     )}
                                                 >
                                                     {c.label}
