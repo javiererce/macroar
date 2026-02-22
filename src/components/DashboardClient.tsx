@@ -1883,7 +1883,7 @@ const CryptoTab = ({ data }: { data: DashboardData }) => {
                                         <XAxis dataKey="fecha" tick={{ fill: C_CRYPTO.muted, fontSize: 10, fontWeight: "bold" }} tickLine={false} axisLine={false} dy={10} />
                                         <YAxis tick={{ fill: C_CRYPTO.muted, fontSize: 10, fontWeight: "bold" }} tickFormatter={v => monedaVista === "ARS" ? `$${(v / 1000000).toFixed(0)}M` : `$${(v / 1000).toFixed(0)}K`} tickLine={false} axisLine={false} dx={-10} />
                                         <Tooltip contentStyle={tt_crypto} formatter={v => [monedaVista === "ARS" ? fmtARS(Number(v)) : fmtUSD(Number(v)), "BTC"]} />
-                                        <Area type="monotone" dataKey={monedaVista === "ARS" ? "ars" : "usd"} stroke={C_CRYPTO.bitcoin} fill="url(#btcGrad)" strokeWidth={3} />
+                                        <Area type="monotone" dataKey={monedaVista === "ARS" ? "ars" : "usd"} stroke={C_CRYPTO.bitcoin} fill="url(#btcGrad)" strokeWidth={3} isAnimationActive={false} />
                                     </AreaChart>
                                 </ResponsiveContainer>
                             </div>
@@ -1912,7 +1912,7 @@ const CryptoTab = ({ data }: { data: DashboardData }) => {
                                         <XAxis type="number" tick={{ fill: C_CRYPTO.muted, fontSize: 10, fontWeight: "bold" }} unit="%" tickLine={false} axisLine={false} domain={[0, 'dataMax + 20']} />
                                         <YAxis type="category" dataKey="activo" tick={{ fill: C_CRYPTO.muted, fontSize: 11, fontWeight: "bold" }} width={130} tickLine={false} axisLine={false} />
                                         <Tooltip contentStyle={tt_crypto} cursor={{ fill: 'rgba(255,255,255,0.05)' }} formatter={(v: any) => [`${v}%`, "Rendimiento"]} />
-                                        <Bar dataKey="rendimiento" radius={10} barSize={26}>
+                                        <Bar dataKey="rendimiento" radius={10} barSize={26} isAnimationActive={false}>
                                             {mockComparacion.map((entry: any, i: number) => (
                                                 <Cell key={i} fill={entry.activo === 'Bitcoin' || entry.activo === 'Ethereum' ? 'url(#barGrad)' : entry.color} />
                                             ))}
