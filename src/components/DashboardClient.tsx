@@ -1786,7 +1786,7 @@ const CryptoTab = ({ data }: { data: DashboardData }) => {
 
             {/* KPIs rápidos */}
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 14, marginBottom: 20 }}>
-                {cryptos.slice(0, 4).map(c => (
+                {cryptos.slice(0, 4).map((c: any) => (
                     <div key={c.id} style={{ background: C_CRYPTO.card, border: `1px solid ${C_CRYPTO.border}`, borderLeft: `4px solid ${c.color}`, borderRadius: "18px", padding: "1.25rem", transition: "transform 0.2s" }} className="group hover:scale-[1.03] shadow-lg">
                         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
                             <span style={{ color: C_CRYPTO.muted, fontSize: 11, fontWeight: 700 }}>{c.icon} {c.simbolo}</span>
@@ -1836,7 +1836,7 @@ const CryptoTab = ({ data }: { data: DashboardData }) => {
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {cryptos.map((c, i) => (
+                                            {cryptos.map((c: any, i: number) => (
                                                 <tr key={c.id} style={{ borderBottom: i < cryptos.length - 1 ? `1px solid ${C_CRYPTO.border}` : "none", transition: "background 0.2s" }}
                                                     onMouseEnter={e => e.currentTarget.style.background = C_CRYPTO.card2}
                                                     onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
@@ -1900,8 +1900,8 @@ const CryptoTab = ({ data }: { data: DashboardData }) => {
                             </div>
                             <div style={{ background: C_CRYPTO.card, border: `1px solid ${C_CRYPTO.border}`, borderRadius: "24px", padding: "1.5rem" }} className="shadow-xl">
                                 <h3 style={{ color: C_CRYPTO.text, fontSize: 14, fontWeight: 800, marginBottom: 20, textTransform: "uppercase", letterSpacing: "1px" }}>Rendimiento % en ARS — últimos 12 meses</h3>
-                                <ResponsiveContainer width="100%" height={280}>
-                                    <BarChart data={mockComparacion} layout="vertical" margin={{ left: -10 }}>
+                                <ResponsiveContainer width="100%" height={320}>
+                                    <BarChart data={mockComparacion} layout="vertical" margin={{ left: 10, right: 40, top: 0, bottom: 0 }}>
                                         <defs>
                                             <linearGradient id="barGrad" x1="0" y1="0" x2="1" y2="0">
                                                 <stop offset="0%" stopColor="#FF0080" />
@@ -1909,11 +1909,11 @@ const CryptoTab = ({ data }: { data: DashboardData }) => {
                                             </linearGradient>
                                         </defs>
                                         <CartesianGrid strokeDasharray="3 3" stroke={C_CRYPTO.border} horizontal={false} />
-                                        <XAxis type="number" tick={{ fill: C_CRYPTO.muted, fontSize: 10, fontWeight: "bold" }} unit="%" tickLine={false} axisLine={false} />
-                                        <YAxis type="category" dataKey="activo" tick={{ fill: C_CRYPTO.muted, fontSize: 11, fontWeight: "bold" }} width={110} tickLine={false} axisLine={false} />
-                                        <Tooltip contentStyle={tt_crypto} cursor={{ fill: 'rgba(255,255,255,0.05)' }} formatter={v => [`${v}%`, "Rendimiento"]} />
-                                        <Bar dataKey="rendimiento" radius={[0, 10, 10, 0]} barSize={26}>
-                                            {mockComparacion.map((entry, i) => (
+                                        <XAxis type="number" tick={{ fill: C_CRYPTO.muted, fontSize: 10, fontWeight: "bold" }} unit="%" tickLine={false} axisLine={false} domain={[0, 'dataMax + 20']} />
+                                        <YAxis type="category" dataKey="activo" tick={{ fill: C_CRYPTO.muted, fontSize: 11, fontWeight: "bold" }} width={130} tickLine={false} axisLine={false} />
+                                        <Tooltip contentStyle={tt_crypto} cursor={{ fill: 'rgba(255,255,255,0.05)' }} formatter={(v: any) => [`${v}%`, "Rendimiento"]} />
+                                        <Bar dataKey="rendimiento" radius={10} barSize={26}>
+                                            {mockComparacion.map((entry: any, i: number) => (
                                                 <Cell key={i} fill={entry.activo === 'Bitcoin' || entry.activo === 'Ethereum' ? 'url(#barGrad)' : entry.color} />
                                             ))}
                                         </Bar>
