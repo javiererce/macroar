@@ -834,14 +834,14 @@ const ResumenTab = ({ data }: DashboardProps) => (
             <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={data.inflacion.length ? data.inflacion : defaultInflacion}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-color)" opacity={0.5} />
-                    <XAxis dataKey="mes" tick={{ fill: "#e2e8f0", fontSize: 12, fontWeight: 600 }} axisLine={false} tickLine={false} />
-                    <YAxis tick={{ fill: "#e2e8f0", fontSize: 12, fontWeight: 700 }} unit="%" axisLine={false} tickLine={false} />
+                    <XAxis dataKey="mes" tick={{ fill: "#ffffff", fontSize: 13, fontWeight: 700 }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fill: "#ffffff", fontSize: 13, fontWeight: 700 }} unit="%" axisLine={false} tickLine={false} />
                     <Tooltip
                         cursor={{ fill: 'var(--card-secondary)', opacity: 0.4 }}
                         contentStyle={{ backgroundColor: "#141416", border: "1px solid #333338", borderRadius: "16px", boxShadow: "0 15px 35px -5px rgba(0, 0, 0, 0.5)", padding: "16px" }}
-                        itemStyle={{ color: "var(--accent)", fontWeight: "black", fontSize: "16px" }}
+                        itemStyle={{ color: "#E86B98", fontWeight: "black", fontSize: "16px" }}
                     />
-                    <Bar dataKey="valor" fill="var(--accent)" radius={[8, 8, 0, 0]} barSize={36} />
+                    <Bar dataKey="valor" fill="#E86B98" radius={[8, 8, 0, 0]} barSize={36} />
                 </BarChart>
             </ResponsiveContainer>
         </ChartCard>
@@ -914,14 +914,14 @@ const PreciosTab = ({ data }: DashboardProps) => (
                 <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={data.inflacion.length ? data.inflacion : defaultInflacion}>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-color)" opacity={0.4} />
-                        <XAxis dataKey="mes" tick={{ fill: "#e2e8f0", fontSize: 11, fontWeight: 700 }} axisLine={false} tickLine={false} />
-                        <YAxis tick={{ fill: "#e2e8f0", fontSize: 11, fontWeight: 700 }} unit="%" axisLine={false} tickLine={false} />
+                        <XAxis dataKey="mes" tick={{ fill: "#ffffff", fontSize: 13, fontWeight: 700 }} axisLine={false} tickLine={false} />
+                        <YAxis tick={{ fill: "#ffffff", fontSize: 13, fontWeight: 700 }} unit="%" axisLine={false} tickLine={false} />
                         <Tooltip
                             contentStyle={{ backgroundColor: "#141416", border: "1px solid #333338", borderRadius: "16px", padding: "16px", boxShadow: "0 20px 40px -5px rgba(0, 0, 0, 0.6)" }}
                             cursor={{ fill: 'var(--card-secondary)', opacity: 0.3 }}
-                            itemStyle={{ color: "var(--accent)", fontWeight: "black", fontSize: "18px" }}
+                            itemStyle={{ color: "#E86B98", fontWeight: "black", fontSize: "18px" }}
                         />
-                        <Bar dataKey="valor" fill="var(--accent)" radius={[10, 10, 0, 0]} barSize={44} />
+                        <Bar dataKey="valor" fill="#E86B98" radius={[10, 10, 0, 0]} barSize={44} />
                     </BarChart>
                 </ResponsiveContainer>
             </ChartCard>
