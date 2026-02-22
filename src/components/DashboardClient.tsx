@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
     LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid,
     Tooltip, ResponsiveContainer, Legend, AreaChart, Area,
@@ -699,6 +699,7 @@ export default function DashboardClient({ data }: DashboardProps) {
         { id: "calendario", label: "📅 Calendario" },
         { id: "resumen_ia", label: "🤖 Resumen IA" },
         { id: "crypto", label: "🪙 Crypto" },
+        { id: "simulador", label: "🔮 Simulador" },
     ];
 
     // Merge Real Data with KPIs
@@ -876,6 +877,7 @@ export default function DashboardClient({ data }: DashboardProps) {
                             {tab === "calendario" && <CalendarioTab />}
                             {tab === "resumen_ia" && <ResumenIaTab data={data} />}
                             {tab === "crypto" && <CryptoTab />}
+                            {tab === "simulador" && <SimuladorTab />}
                         </div>
                     )}
                 </div>
@@ -1912,6 +1914,631 @@ const CryptoTab = () => {
             <div style={{ marginTop: 24, padding: "10px 16px", background: C_CRYPTO.card, borderRadius: "12px", border: `1px solid ${C_CRYPTO.border}`, fontSize: 11, color: C_CRYPTO.muted, display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 10, fontWeight: "bold" }}>
                 <span>📡 Feed: CoinGecko API · Binance · argentinadatos.com</span>
                 <span style={{ fontWeight: 800, color: C_CRYPTO.accent }}>macroar.vercel.app</span>
+            </div>
+        </div>
+    );
+};
+
+// ─── SIMULADOR Y TASAS EN VIVO ──────────────────────────────────────────────
+const C_SIMULADOR = {
+    bg: "transparent", card: "var(--card)", card2: "var(--card2)", border: "var(--border-color)",
+    accent: "var(--accent)", green: "var(--green)", red: "var(--red)", yellow: "var(--yellow)",
+    purple: "var(--purple)", orange: "var(--orange)", text: "var(--text)", muted: "var(--muted)",
+};
+
+const tt_simulador = { backgroundColor: "var(--card2)", border: "1px solid var(--border-color)", borderRadius: 8, color: "var(--text)", fontSize: 12 };
+
+// ─── FALLBACK (si la API falla, mostramos esto con etiqueta ESTIMADO) ────────
+const FALLBACK = {
+    oficial: { compra: 1050, venta: 1063 },
+    blue: { compra: 1330, venta: 1340 },
+    mep: { compra: 1095, venta: 1098 },
+    ccl: { compra: 1105, venta: 1110 },
+    crypto: { compra: 1100, venta: 1108 },
+    inflacionMensual: 2.4,
+    inflacionAnual: 66,
+    riesgoPais: 724,
+};
+
+// ─── HOOK: FETCH CON RETRY ────────────────────────────────────────────────────
+const useFetch = (url: string, transform: any, fallback: any) => {
+    const [data, setData] = useState<any>(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(false);
+    const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+
+    const fetch_ = useCallback(async () => {
+        setLoading(true);
+        setError(false);
+        try {
+            const res = await fetch(url, { cache: "no-store" });
+            if (!res.ok) throw new Error();
+            const json = await res.json();
+            setData(transform ? transform(json) : json);
+            setLastUpdated(new Date());
+            setError(false);
+        } catch {
+            setData(fallback ?? null);
+            setError(true);
+        }
+        setLoading(false);
+    }, [url, transform, fallback]);
+
+    useEffect(() => {
+        fetch_();
+        const interval = setInterval(fetch_, 3 * 60 * 1000); // 3 minutes
+        return () => clearInterval(interval);
+    }, [fetch_]);
+
+    return { data, loading, error, lastUpdated, refresh: fetch_ };
+};
+
+// ─── BADGE DE ESTADO ─────────────────────────────────────────────────────────
+const StatusBadge = ({ loading, error, lastUpdated, onRefresh }: any) => {
+    const [now, setNow] = useState(Date.now());
+    useEffect(() => { const t = setInterval(() => setNow(Date.now()), 30000); return () => clearInterval(t); }, []);
+
+    const secsAgo = lastUpdated ? Math.floor((now - lastUpdated.getTime()) / 1000) : null;
+    const label = loading ? "Actualizando..." :
+        error ? "⚠️ Sin conexión — datos estimados" :
+            secsAgo !== null ? (secsAgo < 60 ? `Hace ${secsAgo}s` : `Hace ${Math.floor(secsAgo / 60)}min`) : "";
+
+    return (
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <div style={{
+                width: 7, height: 7, borderRadius: "50%",
+                background: loading ? C_SIMULADOR.yellow : error ? C_SIMULADOR.red : C_SIMULADOR.green,
+                boxShadow: `0 0 6px ${loading ? C_SIMULADOR.yellow : error ? C_SIMULADOR.red : C_SIMULADOR.green}`,
+                animation: loading ? "pulse 1s infinite" : "none",
+            }} />
+            <span style={{ fontSize: 10, color: error ? C_SIMULADOR.red : C_SIMULADOR.muted }}>{label}</span>
+            <button onClick={onRefresh} style={{
+                background: "none", border: `1px solid ${C_SIMULADOR.border}`, borderRadius: 6,
+                color: C_SIMULADOR.muted, fontSize: 10, padding: "2px 8px", cursor: "pointer",
+            }}>↻ Actualizar</button>
+            <style>{`@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }`}</style>
+        </div>
+    );
+};
+
+// ─── PANEL DE TASAS ───────────────────────
+const TASAS_ACTUALIZADAS = "21 feb 2025";
+
+const cuentasRemuneradas = [
+    { nombre: "Uala", tipo: "Fintech", tna: 34.5, logoColor: "#7c3aed", tag: "🏆 Mejor tasa" },
+    { nombre: "Brubank", tipo: "Banco digital", tna: 31.0, logoColor: "#ef4444", tag: null },
+    { nombre: "Lemon Cash", tipo: "Fintech", tna: 32.0, logoColor: "#f59e0b", tag: null },
+    { nombre: "Mercado Pago", tipo: "Fintech", tna: 30.0, logoColor: "#3b82f6", tag: "📱 Más usuarios" },
+    { nombre: "Personal Pay", tipo: "Fintech", tna: 29.5, logoColor: "#10b981", tag: null },
+    { nombre: "Belo", tipo: "Fintech", tna: 28.0, logoColor: "#f97316", tag: null },
+    { nombre: "Banco Nación", tipo: "Banco", tna: 27.0, logoColor: "#6b7280", tag: null },
+];
+
+const plazosFijos = [
+    { nombre: "Uala (PF)", tna: 36.0, tae: 43.1, logoColor: "#7c3aed", tag: "🏆 Mejor tasa" },
+    { nombre: "Banco Nación", tna: 34.5, tae: 41.2, logoColor: "#6b7280", tag: "🏛️ Más seguro" },
+    { nombre: "Banco Provincia", tna: 34.5, tae: 41.2, logoColor: "#3b82f6", tag: null },
+    { nombre: "Macro", tna: 33.5, tae: 40.0, logoColor: "#7c3aed", tag: "📊 Mejor banco privado" },
+    { nombre: "Galicia", tna: 33.0, tae: 39.4, logoColor: "#ef4444", tag: null },
+    { nombre: "BBVA", tna: 33.0, tae: 39.4, logoColor: "#1d4ed8", tag: null },
+    { nombre: "Santander", tna: 32.5, tae: 38.7, logoColor: "#dc2626", tag: null },
+    { nombre: "ICBC", tna: 32.0, tae: 38.1, logoColor: "#b45309", tag: null },
+];
+
+const prestamos = [
+    { nombre: "Banco Nación", cft: 89.5, tna: 72.0, cuota12: 12800, logoColor: "#6b7280", tag: null },
+    { nombre: "HSBC", cft: 98.4, tna: 78.0, cuota12: 13200, logoColor: "#10b981", tag: "💡 Mejor CFT" },
+    { nombre: "BBVA", cft: 105.2, tna: 84.0, cuota12: 13900, logoColor: "#1d4ed8", tag: null },
+    { nombre: "Galicia", cft: 112.3, tna: 88.0, cuota12: 14200, logoColor: "#ef4444", tag: null },
+    { nombre: "Santander", cft: 118.7, tna: 92.0, cuota12: 14800, logoColor: "#dc2626", tag: null },
+    { nombre: "Naranja X", cft: 138.0, tna: 105.0, cuota12: 16000, logoColor: "#f97316", tag: "📱 Sin trámites" },
+    { nombre: "Mercado Crédito", cft: 145.0, tna: 110.0, cuota12: 16500, logoColor: "#3b82f6", tag: "⚡ Inmediato" },
+];
+
+const hipotecarios = [
+    { nombre: "Banco Nación — UVA", cuota100k: 850, tna: 4.5, plazo: 20, requisito: "Relación cuota/ingreso 25%", logoColor: "#6b7280", tag: "🏆 Más barato" },
+    { nombre: "Macro — UVA", cuota100k: 870, tna: 4.75, plazo: 20, requisito: "Cuenta sueldo Macro", logoColor: "#7c3aed", tag: "🏦 Clientes Macro" },
+    { nombre: "Galicia — UVA", cuota100k: 890, tna: 5.0, plazo: 20, requisito: "Antigüedad laboral 1 año", logoColor: "#ef4444", tag: null },
+    { nombre: "Santander — UVA", cuota100k: 920, tna: 5.5, plazo: 20, requisito: "Ingresos demostrables", logoColor: "#dc2626", tag: null },
+    { nombre: "BBVA — UVA", cuota100k: 910, tna: 5.25, plazo: 20, requisito: "DNI + recibo de sueldo", logoColor: "#1d4ed8", tag: null },
+];
+
+// ─── SIMULADOR ────────────────────────────────────────────────────────────────
+const SimuladorPF = ({ inflacionMensual }: any) => {
+    const [monto, setMonto] = useState("500000");
+    const [plazo, setPlazo] = useState("30");
+    const [banco, setBanco] = useState("Uala (PF)");
+    const b = plazosFijos.find(p => p.nombre === banco) || plazosFijos[0];
+    const montoNum = parseFloat(monto) || 0;
+    const plazoNum = parseFloat(plazo) || 30;
+    const interes = montoNum * (b.tna / 100) * (plazoNum / 365);
+    const total = montoNum + interes;
+    const inflPer = inflacionMensual * (plazoNum / 30);
+    const ganReal = (b.tna / 100 * plazoNum / 365 - inflPer / 100) * 100;
+
+    return (
+        <div style={{ background: C_SIMULADOR.card2, borderRadius: 12, padding: "1.25rem", marginTop: 14 }}>
+            <h4 style={{ color: C_SIMULADOR.text, fontSize: 13, fontWeight: 600, marginBottom: 12 }}>🧮 Simulador de Plazo Fijo</h4>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 14 }}>
+                <div>
+                    <label style={{ color: C_SIMULADOR.muted, fontSize: 11, display: "block", marginBottom: 4 }}>BANCO</label>
+                    <select value={banco} onChange={e => setBanco(e.target.value)}
+                        style={{ width: "100%", background: C_SIMULADOR.bg, border: `1px solid ${C_SIMULADOR.border}`, borderRadius: 8, color: C_SIMULADOR.text, padding: "8px 10px", fontSize: 12 }}>
+                        {plazosFijos.map(p => <option key={p.nombre}>{p.nombre}</option>)}
+                    </select>
+                </div>
+                <div>
+                    <label style={{ color: C_SIMULADOR.muted, fontSize: 11, display: "block", marginBottom: 4 }}>MONTO (ARS)</label>
+                    <input type="number" value={monto} onChange={e => setMonto(e.target.value)}
+                        style={{ width: "100%", background: C_SIMULADOR.bg, border: `1px solid ${C_SIMULADOR.border}`, borderRadius: 8, color: C_SIMULADOR.text, padding: "8px 10px", fontSize: 12, boxSizing: "border-box" }} />
+                </div>
+                <div>
+                    <label style={{ color: C_SIMULADOR.muted, fontSize: 11, display: "block", marginBottom: 4 }}>PLAZO (días)</label>
+                    <select value={plazo} onChange={e => setPlazo(e.target.value)}
+                        style={{ width: "100%", background: C_SIMULADOR.bg, border: `1px solid ${C_SIMULADOR.border}`, borderRadius: 8, color: C_SIMULADOR.text, padding: "8px 10px", fontSize: 12 }}>
+                        {[30, 60, 90, 180, 365].map(d => <option key={d} value={d}>{d} días</option>)}
+                    </select>
+                </div>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 10 }}>
+                <Stat label="💰 Interés ganado" value={`$${Math.round(interes).toLocaleString("es-AR")}`} sub={`TNA: ${b.tna}%`} color={C_SIMULADOR.accent} />
+                <Stat label="📈 Total al vencimiento" value={`$${Math.round(total).toLocaleString("es-AR")}`} sub={`En ${plazo} días`} color={C_SIMULADOR.green} />
+                <Stat label="🛡️ Ganancia real" value={`${ganReal >= 0 ? "+" : ""}${ganReal.toFixed(1)}%`}
+                    sub={ganReal >= 0 ? "Le ganás a la inflación" : "Perdés vs inflación"}
+                    color={ganReal >= 0 ? C_SIMULADOR.green : C_SIMULADOR.red} />
+            </div>
+        </div>
+    );
+};
+
+const Stat = ({ label, value, sub, color }: any) => (
+    <div style={{ background: C_SIMULADOR.card, borderRadius: 10, padding: 12, borderLeft: `3px solid ${color}` }}>
+        <div style={{ color: C_SIMULADOR.muted, fontSize: 11, marginBottom: 4 }}>{label}</div>
+        <div style={{ color, fontWeight: 700, fontSize: 18 }}>{value}</div>
+        <div style={{ color: C_SIMULADOR.muted, fontSize: 10 }}>{sub}</div>
+    </div>
+);
+
+// ─── DÓLAR EN TIEMPO REAL ─────────────────────────────────────────────────────
+const CASAS_MAP: Record<string, any> = {
+    oficial: { label: "OFICIAL", color: C_SIMULADOR.accent },
+    blue: { label: "BLUE", color: C_SIMULADOR.yellow },
+    bolsa: { label: "MEP", color: C_SIMULADOR.purple },
+    contadoconliqui: { label: "CCL", color: C_SIMULADOR.orange },
+    cripto: { label: "CRYPTO", color: C_SIMULADOR.green },
+};
+
+const DolarPanel = ({ data, loading, error, lastUpdated, onRefresh, inflacionAnual }: any) => {
+    if (loading && !data) return <LoadingCard label="💵 Cargando tipos de cambio..." />;
+
+    const dolares = data ? data.reduce((acc: any, d: any) => {
+        if (CASAS_MAP[d.casa]) acc[d.casa] = d;
+        return acc;
+    }, {}) : null;
+
+    const oficial = dolares?.oficial?.venta || FALLBACK.oficial.venta;
+
+    const items = Object.entries(CASAS_MAP).map(([casa, meta]) => {
+        const d = dolares?.[casa];
+        const fbKey = casa === "bolsa" ? "mep" : casa === "contadoconliqui" ? "ccl" : casa === "cripto" ? "crypto" : casa;
+        const venta = d?.venta ?? (FALLBACK as any)[fbKey]?.venta;
+        const brecha = casa !== "oficial" ? (((venta / oficial) - 1) * 100).toFixed(1) : null;
+        return { ...meta, casa, venta, brecha };
+    });
+
+    return (
+        <div style={{ background: C_SIMULADOR.card, border: `1px solid ${C_SIMULADOR.border}`, borderRadius: 12, padding: "1.25rem" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, flexWrap: "wrap", gap: 8 }}>
+                <h3 style={{ color: C_SIMULADOR.text, fontSize: 13, fontWeight: 600, margin: 0 }}>💵 Tipos de Cambio</h3>
+                <StatusBadge loading={loading} error={error} lastUpdated={lastUpdated} onRefresh={onRefresh} />
+            </div>
+            {error && <div style={{ background: `${C_SIMULADOR.yellow}22`, border: `1px solid ${C_SIMULADOR.yellow}44`, borderRadius: 8, padding: "6px 12px", fontSize: 11, color: C_SIMULADOR.yellow, marginBottom: 10 }}>
+                ⚠️ Sin conexión a la API — mostrando valores estimados, no en tiempo real
+            </div>}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(100px, 1fr))", gap: 8 }}>
+                {items.map(d => (
+                    <div key={d.casa} style={{
+                        background: C_SIMULADOR.card2, borderRadius: 10, padding: "14px 10px", textAlign: "center",
+                        border: `1px solid ${C_SIMULADOR.border}`, borderTop: `2px solid ${d.color}`,
+                    }}>
+                        <div style={{ color: C_SIMULADOR.muted, fontSize: 9, marginBottom: 6, letterSpacing: 1 }}>{d.label}</div>
+                        <div style={{ color: d.color, fontWeight: 700, fontSize: 17, marginBottom: 4 }}>
+                            ${d.venta?.toLocaleString("es-AR") ?? "—"}
+                        </div>
+                        {d.brecha && (
+                            <div style={{ fontSize: 9, color: C_SIMULADOR.yellow }}>brecha {d.brecha}%</div>
+                        )}
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+};
+
+// ─── LOADING CARD ─────────────────────────────────────────────────────────────
+const LoadingCard = ({ label }: any) => (
+    <div style={{ background: C_SIMULADOR.card, border: `1px solid ${C_SIMULADOR.border}`, borderRadius: 12, padding: "2rem", textAlign: "center" }}>
+        <div style={{ color: C_SIMULADOR.muted, fontSize: 12, animation: "pulse 1.2s infinite" }}>{label}</div>
+    </div>
+);
+
+// ─── INFLACIÓN en tiempo real ─────────────────────────────────────────────────
+const InflacionPanel = ({ data, loading, error, lastUpdated, onRefresh }: any) => {
+    if (loading && !data) return <LoadingCard label="📈 Cargando inflación..." />;
+
+    const serie = data ? data.slice(-8) : [];
+    const ultimo = data ? data[data.length - 1] : null;
+    const penultimo = data ? data[data.length - 2] : null;
+    const valorActual = ultimo?.valor ?? FALLBACK.inflacionMensual;
+    const valorAnterior = penultimo?.valor ?? 2.7;
+
+    const ultimos12 = data ? data.slice(-12) : [];
+    const inflAnual = ultimos12.reduce((acc: number, m: any) => acc * (1 + m.valor / 100), 1);
+    const inflAnualPct = ((inflAnual - 1) * 100).toFixed(1);
+
+    return (
+        <div style={{ background: C_SIMULADOR.card, border: `1px solid ${C_SIMULADOR.border}`, borderRadius: 12, padding: "1.25rem" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, flexWrap: "wrap", gap: 8 }}>
+                <h3 style={{ color: C_SIMULADOR.text, fontSize: 13, fontWeight: 600, margin: 0 }}>📈 Inflación IPC (INDEC)</h3>
+                <StatusBadge loading={loading} error={error} lastUpdated={lastUpdated} onRefresh={onRefresh} />
+            </div>
+            {error && <ErrBanner />}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(100px, 1fr))", gap: 10, marginBottom: 14 }}>
+                <Stat label="Mensual actual" value={`${valorActual}%`} sub={ultimo?.fecha?.slice(0, 7) ?? ""} color={C_SIMULADOR.red} />
+                <Stat label="Mes anterior" value={`${valorAnterior}%`} sub={penultimo?.fecha?.slice(0, 7) ?? ""} color={C_SIMULADOR.orange} />
+                <Stat label="Acum. 12 meses" value={`${inflAnualPct}%`} sub="Últimos 12 meses" color={C_SIMULADOR.red} />
+            </div>
+            {serie.length > 0 && (
+                <ResponsiveContainer width="100%" height={140}>
+                    <AreaChart data={serie.map((d: any) => ({ mes: d.fecha?.slice(0, 7), v: d.valor }))}>
+                        <defs>
+                            <linearGradient id="gradInfl" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor={C_SIMULADOR.red} stopOpacity={0.3} />
+                                <stop offset="95%" stopColor={C_SIMULADOR.red} stopOpacity={0} />
+                            </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke={C_SIMULADOR.border} vertical={false} />
+                        <XAxis dataKey="mes" tick={{ fill: C_SIMULADOR.muted, fontSize: 9 }} axisLine={false} tickLine={false} />
+                        <YAxis tick={{ fill: C_SIMULADOR.muted, fontSize: 9 }} unit="%" axisLine={false} tickLine={false} />
+                        <Tooltip contentStyle={tt_simulador} formatter={(v: any) => [`${v}%`, "IPC mensual"]} cursor={{ fill: "transparent" }} />
+                        <Area type="monotone" dataKey="v" stroke={C_SIMULADOR.red} fill="url(#gradInfl)" strokeWidth={2} dot={false} />
+                    </AreaChart>
+                </ResponsiveContainer>
+            )}
+        </div>
+    );
+};
+
+const ErrBanner = () => (
+    <div style={{ background: `${C_SIMULADOR.yellow}22`, border: `1px solid ${C_SIMULADOR.yellow}44`, borderRadius: 8, padding: "6px 12px", fontSize: 11, color: C_SIMULADOR.yellow, marginBottom: 10 }}>
+        ⚠️ Sin conexión a la API — datos estimados
+    </div>
+);
+
+// ─── RIESGO PAÍS ──────────────────────────────────────────────────────────────
+const RiesgoPaisPanel = ({ data, loading, error, lastUpdated, onRefresh }: any) => {
+    if (loading && !data) return <LoadingCard label="⚡ Cargando riesgo país..." />;
+    const serie = data ? data.slice(-8) : [];
+    const ultimo = data ? data[data.length - 1] : null;
+    const valor = ultimo?.valor ?? FALLBACK.riesgoPais;
+    const color = valor < 600 ? C_SIMULADOR.green : valor < 1000 ? C_SIMULADOR.yellow : valor < 1800 ? C_SIMULADOR.orange : C_SIMULADOR.red;
+
+    return (
+        <div style={{ background: C_SIMULADOR.card, border: `1px solid ${C_SIMULADOR.border}`, borderRadius: 12, padding: "1.25rem" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, flexWrap: "wrap", gap: 8 }}>
+                <h3 style={{ color: C_SIMULADOR.text, fontSize: 13, fontWeight: 600, margin: 0 }}>⚡ Riesgo País EMBI+</h3>
+                <StatusBadge loading={loading} error={error} lastUpdated={lastUpdated} onRefresh={onRefresh} />
+            </div>
+            {error && <ErrBanner />}
+            <div style={{ textAlign: "center", marginBottom: 14 }}>
+                <div style={{ fontSize: 48, fontWeight: 800, color, lineHeight: 1 }}>{valor}</div>
+                <div style={{ color: C_SIMULADOR.muted, fontSize: 11, marginTop: 4 }}>puntos básicos · JPMC</div>
+                <div style={{ color: C_SIMULADOR.muted, fontSize: 10, marginTop: 2 }}>{ultimo?.fecha?.slice(0, 10) ?? ""}</div>
+            </div>
+            {serie.length > 0 && (
+                <ResponsiveContainer width="100%" height={120}>
+                    <AreaChart data={serie.map((d: any) => ({ fecha: d.fecha?.slice(0, 10), v: d.valor }))}>
+                        <defs>
+                            <linearGradient id="gradRP" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor={color} stopOpacity={0.3} />
+                                <stop offset="95%" stopColor={color} stopOpacity={0} />
+                            </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke={C_SIMULADOR.border} vertical={false} />
+                        <XAxis dataKey="fecha" tick={{ fill: C_SIMULADOR.muted, fontSize: 8 }} axisLine={false} tickLine={false} />
+                        <YAxis tick={{ fill: C_SIMULADOR.muted, fontSize: 9 }} axisLine={false} tickLine={false} />
+                        <Tooltip contentStyle={tt_simulador} formatter={(v: any) => [`${v}pb`, "EMBI+"]} cursor={{ fill: "transparent" }} />
+                        <Area type="monotone" dataKey="v" stroke={color} fill="url(#gradRP)" strokeWidth={2} dot={false} />
+                    </AreaChart>
+                </ResponsiveContainer>
+            )}
+        </div>
+    );
+};
+
+// ─── TABS ORIGINALES ─────────────────────────────────────────────────────────
+const TabCuentas = ({ inflacionAnual }: any) => {
+    const sorted = [...cuentasRemuneradas].sort((a, b) => b.tna - a.tna);
+    return (
+        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <div style={{ background: `${C_SIMULADOR.accent}11`, border: `1px solid ${C_SIMULADOR.accent}33`, borderRadius: 10, padding: "10px 14px" }}>
+                <p style={{ color: C_SIMULADOR.muted, fontSize: 12, margin: 0 }}>
+                    💡 Las tasas de bancos se actualizan manualmente — se verifican cada semana.
+                    Última verificación: <strong style={{ color: C_SIMULADOR.text }}>{TASAS_ACTUALIZADAS}</strong>.
+                    Para ganarle a la inflación anual necesitás al menos <strong style={{ color: C_SIMULADOR.yellow }}>{inflacionAnual}% TNA.</strong>
+                </p>
+            </div>
+            <div style={{ background: C_SIMULADOR.card, border: `1px solid ${C_SIMULADOR.border}`, borderRadius: 12, padding: "1.25rem" }}>
+                <h3 style={{ color: C_SIMULADOR.text, fontSize: 13, fontWeight: 600, marginBottom: 14 }}>TNA — Cuentas Remuneradas</h3>
+                <ResponsiveContainer width="100%" height={200}>
+                    <BarChart data={sorted} layout="vertical">
+                        <CartesianGrid strokeDasharray="3 3" stroke={C_SIMULADOR.border} />
+                        <XAxis type="number" tick={{ fill: C_SIMULADOR.muted, fontSize: 10 }} unit="%" domain={[0, 40]} />
+                        <YAxis type="category" dataKey="nombre" tick={{ fill: C_SIMULADOR.muted, fontSize: 10 }} width={100} />
+                        <Tooltip contentStyle={tt_simulador} formatter={(v: any) => [`${v}%`, "TNA"]} cursor={{ fill: "transparent" }} />
+                        <ReferenceLine x={inflacionAnual} stroke={C_SIMULADOR.red} strokeDasharray="4 4"
+                            label={{ value: `Inflación ${inflacionAnual}%`, fill: C_SIMULADOR.red, fontSize: 10 }} />
+                        <Bar dataKey="tna" radius={[0, 6, 6, 0]}>
+                            {sorted.map((e, i) => <Cell key={i} fill={e.tna >= inflacionAnual ? C_SIMULADOR.green : e.tna >= inflacionAnual * 0.6 ? C_SIMULADOR.yellow : C_SIMULADOR.red} />)}
+                        </Bar>
+                    </BarChart>
+                </ResponsiveContainer>
+            </div>
+            {sorted.map((b, i) => (
+                <div key={b.nombre} style={{ background: C_SIMULADOR.card, border: `1px solid ${i === 0 ? C_SIMULADOR.accent : C_SIMULADOR.border}`, borderRadius: 10, padding: "14px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                        <div style={{ width: 38, height: 38, borderRadius: 10, background: `${b.logoColor}22`, border: `1px solid ${b.logoColor}44`, display: "flex", alignItems: "center", justifyContent: "center", color: b.logoColor, fontWeight: 800, fontSize: 11 }}>
+                            {b.nombre.slice(0, 2).toUpperCase()}
+                        </div>
+                        <div>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                <span style={{ color: C_SIMULADOR.text, fontWeight: 600, fontSize: 14 }}>{b.nombre}</span>
+                                {b.tag && <span style={{ background: `${b.logoColor}22`, color: b.logoColor, fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 4 }}>{b.tag}</span>}
+                            </div>
+                            <div style={{ color: C_SIMULADOR.muted, fontSize: 11 }}>{b.tipo}</div>
+                        </div>
+                    </div>
+                    <div style={{ display: "flex", gap: 20, alignItems: "center", flexWrap: "wrap" }}>
+                        <div style={{ textAlign: "center" }}>
+                            <div style={{ color: C_SIMULADOR.muted, fontSize: 10 }}>TNA</div>
+                            <div style={{ color: C_SIMULADOR.text, fontWeight: 700, fontSize: 18 }}>{b.tna}%</div>
+                        </div>
+                        <div style={{ textAlign: "center" }}>
+                            <div style={{ color: C_SIMULADOR.muted, fontSize: 10 }}>Mensual</div>
+                            <div style={{ color: C_SIMULADOR.accent, fontWeight: 600, fontSize: 14 }}>{(b.tna / 12).toFixed(1)}%</div>
+                        </div>
+                        <div style={{ background: b.tna >= inflacionAnual ? `${C_SIMULADOR.green}22` : `${C_SIMULADOR.red}22`, color: b.tna >= inflacionAnual ? C_SIMULADOR.green : C_SIMULADOR.red, padding: "6px 12px", borderRadius: 20, fontSize: 11, fontWeight: 700 }}>
+                            {b.tna >= inflacionAnual ? "✅ Le gana a inflación" : "⚠️ Pierde vs inflación"}
+                        </div>
+                    </div>
+                </div>
+            ))}
+        </div>
+    );
+};
+
+const TabPlazoFijo = ({ inflacionMensual, inflacionAnual }: any) => (
+    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+        <div style={{ background: `${C_SIMULADOR.yellow}11`, border: `1px solid ${C_SIMULADOR.yellow}33`, borderRadius: 10, padding: "10px 14px" }}>
+            <p style={{ color: C_SIMULADOR.muted, fontSize: 12, margin: 0 }}>
+                💡 Para que un plazo fijo a 30 días sea rentable en términos reales necesitás una TNA mayor a <strong style={{ color: C_SIMULADOR.yellow }}>{inflacionAnual}%</strong>.
+                La inflación mensual actual es <strong style={{ color: C_SIMULADOR.red }}>{inflacionMensual}%</strong>.
+            </p>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 8 }}>
+            {[...plazosFijos].sort((a, b) => b.tna - a.tna).map((b, i) => (
+                <div key={b.nombre} style={{ background: C_SIMULADOR.card, border: `1px solid ${i === 0 ? C_SIMULADOR.accent : C_SIMULADOR.border}`, borderRadius: 10, padding: "12px 14px" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
+                        <div>
+                            <div style={{ color: C_SIMULADOR.text, fontWeight: 600, fontSize: 13 }}>{b.nombre}</div>
+                            {b.tag && <span style={{ background: `${C_SIMULADOR.accent}22`, color: C_SIMULADOR.accent, fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius: 4 }}>{b.tag}</span>}
+                        </div>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between" }}>
+                        <div><div style={{ color: C_SIMULADOR.muted, fontSize: 10 }}>TNA</div><div style={{ color: C_SIMULADOR.text, fontWeight: 700, fontSize: 16 }}>{b.tna}%</div></div>
+                        <div><div style={{ color: C_SIMULADOR.muted, fontSize: 10 }}>TAE</div><div style={{ color: C_SIMULADOR.accent, fontWeight: 600, fontSize: 14 }}>{b.tae}%</div></div>
+                        <div><div style={{ color: C_SIMULADOR.muted, fontSize: 10 }}>Real</div><div style={{ color: b.tna >= inflacionAnual ? C_SIMULADOR.green : C_SIMULADOR.red, fontWeight: 700, fontSize: 14 }}>{b.tna >= inflacionAnual ? "✅" : "⚠️"}</div></div>
+                    </div>
+                </div>
+            ))}
+        </div>
+        <SimuladorPF inflacionMensual={inflacionMensual} />
+    </div>
+);
+
+// ─── APP PRINCIPAL (Simulador Tab) ────────────────────────────────────────────────────────────
+const TABS_SIMULADOR = [
+    { id: "live", label: "🔴 En Vivo" },
+    { id: "cuentas", label: "💰 Cuentas" },
+    { id: "plazofijo", label: "📈 Plazo Fijo" },
+    { id: "prestamos", label: "💳 Préstamos" },
+    { id: "hipotecarios", label: "🏠 Hipotecarios" },
+];
+
+const SimuladorTab = () => {
+    const [tab, setTab] = useState("live");
+
+    // ── APIs en tiempo real ──
+    const dolar = useFetch(
+        "https://dolarapi.com/v1/dolares",
+        (d: any[]) => d,
+        Object.entries(CASAS_MAP).map(([casa]) => {
+            const fbKey = casa === "bolsa" ? "mep" : casa === "contadoconliqui" ? "ccl" : casa === "cripto" ? "crypto" : casa;
+            return {
+                casa,
+                compra: (FALLBACK as any)[fbKey]?.compra,
+                venta: (FALLBACK as any)[fbKey]?.venta,
+            };
+        })
+    );
+
+    const inflacion = useFetch(
+        "https://api.argentinadatos.com/v1/finanzas/indices/inflacion",
+        (d: any) => d,
+        [{ fecha: "2025-01-01", valor: FALLBACK.inflacionMensual }]
+    );
+
+    const riesgoPais = useFetch(
+        "https://api.argentinadatos.com/v1/finanzas/indices/riesgo-pais",
+        (d: any) => d,
+        [{ fecha: "2025-02-21", valor: FALLBACK.riesgoPais }]
+    );
+
+    const inflMensual = inflacion.data ? inflacion.data[inflacion.data.length - 1]?.valor ?? FALLBACK.inflacionMensual : FALLBACK.inflacionMensual;
+    const ultimos12 = inflacion.data ? inflacion.data.slice(-12) : [];
+    const inflAnual = ultimos12.length > 0
+        ? parseFloat(((ultimos12.reduce((acc: number, m: any) => acc * (1 + m.valor / 100), 1) - 1) * 100).toFixed(1))
+        : FALLBACK.inflacionAnual;
+
+    return (
+        <div style={{ background: C_SIMULADOR.bg, fontFamily: "system-ui,-apple-system,sans-serif", color: C_SIMULADOR.text, padding: "0" }}>
+
+            {/* Header */}
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20, flexWrap: "wrap" }}>
+                <span style={{ fontSize: 26 }}>🇦🇷</span>
+                <div>
+                    <div style={{ fontWeight: 800, fontSize: 17 }}>MacroAR — Comparador Financiero</div>
+                    <div style={{ color: C_SIMULADOR.muted, fontSize: 11 }}>Datos en tiempo real · Bancos y fintech argentinos</div>
+                </div>
+                <div style={{ marginLeft: "auto", display: "flex", gap: 10 }}>
+                    <div style={{ background: `${C_SIMULADOR.red}22`, border: `1px solid ${C_SIMULADOR.red}44`, borderRadius: 10, padding: "8px 14px", textAlign: "center" }}>
+                        <div style={{ color: C_SIMULADOR.muted, fontSize: 10 }}>Inflación mensual</div>
+                        <div style={{ color: C_SIMULADOR.red, fontWeight: 700, fontSize: 16 }}>{inflMensual}%</div>
+                        <div style={{ color: C_SIMULADOR.muted, fontSize: 9 }}>{inflacion.error ? "estimado" : "INDEC"}</div>
+                    </div>
+                    <div style={{ background: `${C_SIMULADOR.red}22`, border: `1px solid ${C_SIMULADOR.red}44`, borderRadius: 10, padding: "8px 14px", textAlign: "center" }}>
+                        <div style={{ color: C_SIMULADOR.muted, fontSize: 10 }}>Inflación anual</div>
+                        <div style={{ color: C_SIMULADOR.red, fontWeight: 700, fontSize: 16 }}>{inflAnual}%</div>
+                        <div style={{ color: C_SIMULADOR.muted, fontSize: 9 }}>{inflacion.error ? "estimado" : "últ. 12 meses"}</div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Tabs */}
+            <div style={{ display: "flex", borderBottom: `1px solid ${C_SIMULADOR.border}`, marginBottom: 16, overflowX: "auto" }}>
+                {TABS_SIMULADOR.map(t => (
+                    <button key={t.id} onClick={() => setTab(t.id)} style={{
+                        background: "none", border: "none",
+                        borderBottom: tab === t.id ? `2px solid ${C_SIMULADOR.accent}` : "2px solid transparent",
+                        color: tab === t.id ? C_SIMULADOR.accent : C_SIMULADOR.muted,
+                        padding: "0.7rem 1rem", cursor: "pointer", fontSize: 13, fontWeight: 500, whiteSpace: "nowrap",
+                    }}>{t.label}</button>
+                ))}
+            </div>
+
+            {/* TAB: EN VIVO */}
+            {tab === "live" && (
+                <div className="animate-in fade-in slide-in-from-bottom-4 duration-500" style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                    <div style={{ background: `${C_SIMULADOR.green}11`, border: `1px solid ${C_SIMULADOR.green}33`, borderRadius: 10, padding: "10px 14px" }}>
+                        <p style={{ color: C_SIMULADOR.muted, fontSize: 12, margin: 0 }}>
+                            🔴 Esta sección trae datos <strong style={{ color: C_SIMULADOR.green }}>en tiempo real</strong> desde APIs públicas.
+                            El dólar se actualiza cada 3 minutos. La inflación y riesgo país se actualizan con cada publicación oficial.
+                        </p>
+                    </div>
+                    <DolarPanel
+                        data={dolar.data} loading={dolar.loading} error={dolar.error}
+                        lastUpdated={dolar.lastUpdated} onRefresh={dolar.refresh}
+                        inflacionAnual={inflAnual}
+                    />
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 16 }}>
+                        <InflacionPanel
+                            data={inflacion.data} loading={inflacion.loading} error={inflacion.error}
+                            lastUpdated={inflacion.lastUpdated} onRefresh={inflacion.refresh}
+                        />
+                        <RiesgoPaisPanel
+                            data={riesgoPais.data} loading={riesgoPais.loading} error={riesgoPais.error}
+                            lastUpdated={riesgoPais.lastUpdated} onRefresh={riesgoPais.refresh}
+                        />
+                    </div>
+                </div>
+            )}
+
+            {/* TAB: CUENTAS */}
+            {tab === "cuentas" && <div className="animate-in fade-in slide-in-from-bottom-4 duration-500"><TabCuentas inflacionAnual={inflAnual} /></div>}
+
+            {/* TAB: PLAZO FIJO */}
+            {tab === "plazofijo" && <div className="animate-in fade-in slide-in-from-bottom-4 duration-500"><TabPlazoFijo inflacionMensual={inflMensual} inflacionAnual={inflAnual} /></div>}
+
+            {/* TAB: PRESTAMOS */}
+            {tab === "prestamos" && (
+                <div className="animate-in fade-in slide-in-from-bottom-4 duration-500" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                    <div style={{ background: `${C_SIMULADOR.red}11`, border: `1px solid ${C_SIMULADOR.red}33`, borderRadius: 10, padding: "10px 14px" }}>
+                        <p style={{ color: C_SIMULADOR.muted, fontSize: 12, margin: 0 }}>
+                            ⚠️ El <strong style={{ color: C_SIMULADOR.text }}>CFT</strong> incluye todos los gastos reales. Siempre comparar por CFT, no por TNA.
+                            Cuota simulada sobre <strong style={{ color: C_SIMULADOR.text }}>$1.000.000 a 12 meses.</strong>
+                        </p>
+                    </div>
+                    {[...prestamos].sort((a, b) => a.cft - b.cft).map((p, i) => (
+                        <div key={p.nombre} style={{ background: C_SIMULADOR.card, border: `1px solid ${i === 0 ? C_SIMULADOR.green : C_SIMULADOR.border}`, borderRadius: 10, padding: "14px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                                <div style={{ width: 38, height: 38, borderRadius: 10, background: `${p.logoColor}22`, border: `1px solid ${p.logoColor}44`, display: "flex", alignItems: "center", justifyContent: "center", color: p.logoColor, fontWeight: 800, fontSize: 11 }}>
+                                    {p.nombre.slice(0, 2).toUpperCase()}
+                                </div>
+                                <div>
+                                    <span style={{ color: C_SIMULADOR.text, fontWeight: 600, fontSize: 14 }}>{p.nombre}</span>
+                                    {p.tag && <span style={{ background: `${C_SIMULADOR.green}22`, color: C_SIMULADOR.green, fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 4, marginLeft: 8 }}>{p.tag}</span>}
+                                </div>
+                            </div>
+                            <div style={{ display: "flex", gap: 20, alignItems: "center", flexWrap: "wrap" }}>
+                                <div style={{ textAlign: "center" }}>
+                                    <div style={{ color: C_SIMULADOR.muted, fontSize: 10 }}>CFT</div>
+                                    <div style={{ color: i === 0 ? C_SIMULADOR.green : C_SIMULADOR.text, fontWeight: 700, fontSize: 16 }}>{p.cft}%</div>
+                                </div>
+                                <div style={{ textAlign: "center" }}>
+                                    <div style={{ color: C_SIMULADOR.muted, fontSize: 10 }}>TNA</div>
+                                    <div style={{ color: C_SIMULADOR.accent, fontWeight: 600, fontSize: 14 }}>{p.tna}%</div>
+                                </div>
+                                <div style={{ textAlign: "center" }}>
+                                    <div style={{ color: C_SIMULADOR.muted, fontSize: 10 }}>Cuota/mes</div>
+                                    <div style={{ color: C_SIMULADOR.yellow, fontWeight: 600, fontSize: 14 }}>${p.cuota12.toLocaleString("es-AR")}</div>
+                                </div>
+                                {i === 0 && <div style={{ background: `${C_SIMULADOR.green}22`, color: C_SIMULADOR.green, padding: "6px 12px", borderRadius: 20, fontSize: 11, fontWeight: 700 }}>💡 Más barato</div>}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            {/* TAB: HIPOTECARIOS */}
+            {tab === "hipotecarios" && (
+                <div className="animate-in fade-in slide-in-from-bottom-4 duration-500" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                    <div style={{ background: `${C_SIMULADOR.purple}11`, border: `1px solid ${C_SIMULADOR.purple}33`, borderRadius: 10, padding: "10px 14px" }}>
+                        <p style={{ color: C_SIMULADOR.muted, fontSize: 12, margin: 0 }}>
+                            🏠 Créditos <strong style={{ color: C_SIMULADOR.text }}>UVA</strong> — se ajustan por inflación.
+                            Cuota simulada por cada <strong style={{ color: C_SIMULADOR.text }}>$100.000 de crédito</strong> a 20 años.
+                        </p>
+                    </div>
+                    {[...hipotecarios].sort((a, b) => a.cuota100k - b.cuota100k).map((h, i) => (
+                        <div key={h.nombre} style={{ background: C_SIMULADOR.card, border: `1px solid ${i === 0 ? C_SIMULADOR.purple : C_SIMULADOR.border}`, borderRadius: 10, padding: "14px 16px" }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                                    <div style={{ width: 38, height: 38, borderRadius: 10, background: `${h.logoColor}22`, border: `1px solid ${h.logoColor}44`, display: "flex", alignItems: "center", justifyContent: "center", color: h.logoColor, fontWeight: 800, fontSize: 11 }}>
+                                        {h.nombre.slice(0, 2).toUpperCase()}
+                                    </div>
+                                    <div>
+                                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                            <span style={{ color: C_SIMULADOR.text, fontWeight: 600, fontSize: 13 }}>{h.nombre}</span>
+                                            {h.tag && <span style={{ background: `${C_SIMULADOR.purple}22`, color: C_SIMULADOR.purple, fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 4 }}>{h.tag}</span>}
+                                        </div>
+                                        <div style={{ color: C_SIMULADOR.muted, fontSize: 11, marginTop: 2 }}>✅ {h.requisito}</div>
+                                    </div>
+                                </div>
+                                <div style={{ display: "flex", gap: 20, alignItems: "center" }}>
+                                    <div><div style={{ color: C_SIMULADOR.muted, fontSize: 10 }}>TNA UVA</div><div style={{ color: C_SIMULADOR.purple, fontWeight: 700, fontSize: 16 }}>{h.tna}%</div></div>
+                                    <div><div style={{ color: C_SIMULADOR.muted, fontSize: 10 }}>Cuota/100K</div><div style={{ color: C_SIMULADOR.text, fontWeight: 700, fontSize: 16 }}>${h.cuota100k.toLocaleString("es-AR")}</div></div>
+                                    <div><div style={{ color: C_SIMULADOR.muted, fontSize: 10 }}>Plazo</div><div style={{ color: C_SIMULADOR.accent, fontWeight: 600, fontSize: 14 }}>{h.plazo} años</div></div>
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            {/* Footer */}
+            <div style={{ marginTop: 16, padding: "8px 12px", background: C_SIMULADOR.card, borderRadius: 8, border: `1px solid ${C_SIMULADOR.border}`, fontSize: 11, color: C_SIMULADOR.muted, display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 6 }}>
+                <span>📡 Fuentes en vivo: dolarapi.com · argentinadatos.com · BCRA · INDEC</span>
+                <span>Tasas bancarias verificadas: <strong style={{ color: C_SIMULADOR.text }}>{TASAS_ACTUALIZADAS}</strong></span>
+                <span style={{ fontWeight: 600 }}>macroar.vercel.app</span>
             </div>
         </div>
     );
