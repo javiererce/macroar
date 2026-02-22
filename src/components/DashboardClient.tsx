@@ -1567,10 +1567,24 @@ INSTRUCCIONES:
 // ── Crypto Tab ──────────────────────────────────────────
 
 const C_CRYPTO = {
-    bg: "transparent", card: "var(--card)", card2: "var(--card2)", border: "var(--border-color)",
-    accent: "var(--accent)", green: "var(--green)", red: "var(--red)", yellow: "var(--yellow)",
-    purple: "var(--purple)", orange: "var(--orange)", text: "var(--text)", muted: "var(--muted)",
-    bitcoin: "#f7931a", ethereum: "#627eea", usdt: "#26a17b",
+    bg: "transparent",
+    card: "var(--card)",
+    card2: "var(--card2)",
+    border: "var(--border-color)",
+    accent: "#FF0080", // Buenbit Pink
+    accentGradient: "linear-gradient(135deg, #FF0080 0%, #7928CA 100%)",
+    green: "#00FFA3", // Buenbit Cyan/Green
+    red: "#FF3B3B",
+    yellow: "#FFD600",
+    purple: "#8A2BE2",
+    orange: "#FF8A00",
+    text: "var(--text)",
+    muted: "var(--muted)",
+    bitcoin: "#F7931A",
+    ethereum: "#627EEA",
+    usdt: "#26A17B",
+    usdc: "#2775CA",
+    dai: "#F5AC37"
 };
 const DOLAR_BLUE = 1220;
 const DOLAR_OFICIAL = 1063;
@@ -1710,10 +1724,21 @@ const CryptoTab = ({ data }: { data: DashboardData }) => {
 
     const fng = useFetch("https://api.alternative.me/fng/", (d: any) => d.data[0], { value: "50", value_classification: "Neutral" });
 
+    const cryptoDolar = useFetch("https://dolarapi.com/v1/dolares/cripto", (d: any) => d, { venta: blue });
+
     const cryptos = coinsPool.data || fallbackCryptos;
     const mockFearValue = parseInt(fng.data?.value || "50");
     const fearLabel = fng.data?.value_classification || "Neutral";
     const fearColor = mockFearValue >= 60 ? C_CRYPTO.green : mockFearValue >= 40 ? C_CRYPTO.yellow : C_CRYPTO.red;
+
+    const precioCryptoDolar = cryptoDolar.data?.venta || blue;
+
+    const stablesData = [
+        { id: 'usdt', nombre: "USDT", exchange: "Binance P2P", color: C_CRYPTO.usdt, icon: "₮" },
+        { id: 'usdc', nombre: "USDC", exchange: "Lemon Cash", color: C_CRYPTO.usdc, icon: "₵" },
+        { id: 'dai', nombre: "DAI", exchange: "Belo / Ripio", color: C_CRYPTO.dai, icon: "◈" },
+        { id: 'busd', nombre: "BUSD", exchange: "Bybit P2P", color: C_CRYPTO.yellow, icon: "B" },
+    ];
 
     const tabs = [
         { id: "precios", label: "💹 Precios" },
@@ -1877,14 +1902,19 @@ const CryptoTab = ({ data }: { data: DashboardData }) => {
                                 <h3 style={{ color: C_CRYPTO.text, fontSize: 14, fontWeight: 800, marginBottom: 20, textTransform: "uppercase", letterSpacing: "1px" }}>Rendimiento % en ARS — últimos 12 meses</h3>
                                 <ResponsiveContainer width="100%" height={280}>
                                     <BarChart data={mockComparacion} layout="vertical" margin={{ left: -10 }}>
+                                        <defs>
+                                            <linearGradient id="barGrad" x1="0" y1="0" x2="1" y2="0">
+                                                <stop offset="0%" stopColor="#FF0080" />
+                                                <stop offset="100%" stopColor="#7928CA" />
+                                            </linearGradient>
+                                        </defs>
                                         <CartesianGrid strokeDasharray="3 3" stroke={C_CRYPTO.border} horizontal={false} />
                                         <XAxis type="number" tick={{ fill: C_CRYPTO.muted, fontSize: 10, fontWeight: "bold" }} unit="%" tickLine={false} axisLine={false} />
                                         <YAxis type="category" dataKey="activo" tick={{ fill: C_CRYPTO.muted, fontSize: 11, fontWeight: "bold" }} width={110} tickLine={false} axisLine={false} />
-                                        <Tooltip contentStyle={tt_crypto} cursor={{ fill: 'transparent' }} formatter={v => [`${v}%`, "Rendimiento"]} />
-                                        <Bar dataKey="rendimiento" radius={[0, 8, 8, 0]} barSize={24}
-                                            label={{ position: "right", fill: C_CRYPTO.muted, fontSize: 11, fontWeight: "bold", formatter: (v: any) => `${v}%` }}>
+                                        <Tooltip contentStyle={tt_crypto} cursor={{ fill: 'rgba(255,255,255,0.05)' }} formatter={v => [`${v}%`, "Rendimiento"]} />
+                                        <Bar dataKey="rendimiento" radius={[0, 10, 10, 0]} barSize={26}>
                                             {mockComparacion.map((entry, i) => (
-                                                <rect key={i} fill={entry.color} />
+                                                <Cell key={i} fill={entry.activo === 'Bitcoin' || entry.activo === 'Ethereum' ? 'url(#barGrad)' : entry.color} />
                                             ))}
                                         </Bar>
                                     </BarChart>
@@ -1918,32 +1948,44 @@ const CryptoTab = ({ data }: { data: DashboardData }) => {
                                 <div style={{ padding: "16px 20px", borderBottom: `1px solid ${C_CRYPTO.border}` }}>
                                     <span style={{ color: C_CRYPTO.text, fontWeight: 800, fontSize: 14, textTransform: "uppercase", letterSpacing: "1px" }}>Stablecoins vs Dólar Blue</span>
                                 </div>
-                                {mockStables.map((s, i) => (
-                                    <div key={s.nombre} style={{ padding: "16px 20px", borderBottom: i < mockStables.length - 1 ? `1px solid ${C_CRYPTO.border}` : "none", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10, transition: "background 0.2s" }} className="hover:bg-card-secondary">
-                                        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-                                            <div style={{ width: 40, height: 40, borderRadius: "50%", background: `${C_CRYPTO.usdt}22`, border: `1px solid ${C_CRYPTO.usdt}44`, display: "flex", alignItems: "center", justifyContent: "center", color: C_CRYPTO.usdt, fontWeight: 800, fontSize: 14 }}>₮</div>
-                                            <div>
-                                                <div style={{ color: C_CRYPTO.text, fontWeight: 800, fontSize: 15 }}>{s.nombre}</div>
-                                                <div style={{ color: C_CRYPTO.muted, fontSize: 12, fontWeight: "bold" }}>{s.exchange}</div>
-                                            </div>
-                                        </div>
-                                        <div style={{ display: "flex", gap: 24, alignItems: "center" }}>
-                                            <div style={{ textAlign: "right" }}>
-                                                <div style={{ color: C_CRYPTO.text, fontWeight: 800, fontSize: 16 }}>${(s.nombre === 'USDT' ? (blue * 0.98) : (blue * 0.97)).toLocaleString("es-AR")}</div>
-                                                <div style={{ color: C_CRYPTO.muted, fontSize: 11, fontWeight: "bold" }}>ARS / {s.nombre}</div>
-                                            </div>
-                                            <div style={{ textAlign: "right", minWidth: 60 }}>
-                                                <div style={{ color: s.vsBlue >= 0 ? C_CRYPTO.green : C_CRYPTO.red, fontWeight: 800, fontSize: 15 }}>
-                                                    {s.vsBlue >= 0 ? "▲" : "▼"} {Math.abs(s.vsBlue)}%
+                                {stablesData.map((s, i) => {
+                                    const spread = s.id === 'usdt' ? 1.01 : (s.id === 'usdc' ? 1.005 : (s.id === 'dai' ? 1.012 : 0.99));
+                                    const precioIndividual = precioCryptoDolar * spread;
+                                    const diffBlue = ((precioIndividual / blue - 1) * 100).toFixed(1);
+                                    const isConvenient = parseFloat(diffBlue) <= 0.5;
+
+                                    return (
+                                        <div key={s.nombre} style={{ padding: "20px 24px", borderBottom: i < stablesData.length - 1 ? `1px solid ${C_CRYPTO.border}` : "none", display: "flex", justifyContent: "space-between", alignItems: "center", transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)" }} className="hover:bg-white/[0.03] group">
+                                            <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+                                                <div style={{ width: 44, height: 44, borderRadius: "14px", background: `${s.color}15`, border: `1px solid ${s.color}33`, display: "flex", alignItems: "center", justifyContent: "center", color: s.color, fontWeight: 900, fontSize: 18 }}>{s.icon}</div>
+                                                <div>
+                                                    <div style={{ color: C_CRYPTO.text, fontWeight: 800, fontSize: 16, letterSpacing: "-0.02em" }}>{s.nombre}</div>
+                                                    <div style={{ color: C_CRYPTO.muted, fontSize: 12, fontWeight: 700 }}>{s.exchange}</div>
                                                 </div>
-                                                <div style={{ color: C_CRYPTO.muted, fontSize: 11, fontWeight: "bold" }}>vs Blue</div>
                                             </div>
-                                            <div style={{ background: s.vsBlue >= -2 ? `${C_CRYPTO.green}22` : `${C_CRYPTO.red}22`, color: s.vsBlue >= -2 ? C_CRYPTO.green : C_CRYPTO.red, padding: "6px 14px", borderRadius: 20, fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: "1px" }}>
-                                                {s.vsBlue >= -2 ? "✅ Conveniente" : "⚠️ Caro"}
+                                            <div style={{ display: "flex", gap: 32, alignItems: "center" }}>
+                                                <div style={{ textAlign: "right" }}>
+                                                    <div style={{ color: C_CRYPTO.text, fontWeight: 900, fontSize: 18, fontFamily: "monospace" }}>${precioIndividual.toLocaleString("es-AR", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</div>
+                                                    <div style={{ color: C_CRYPTO.muted, fontSize: 10, fontWeight: 800, textTransform: "uppercase" }}>ARS / {s.nombre}</div>
+                                                </div>
+                                                <div style={{ textAlign: "right", minWidth: 70 }}>
+                                                    <div style={{ color: parseFloat(diffBlue) >= 0 ? C_CRYPTO.red : C_CRYPTO.green, fontWeight: 900, fontSize: 15 }}>
+                                                        {parseFloat(diffBlue) >= 0 ? "▲" : "▼"} {Math.abs(parseFloat(diffBlue))}%
+                                                    </div>
+                                                    <div style={{ color: C_CRYPTO.muted, fontSize: 10, fontWeight: 800, textTransform: "uppercase" }}>vs Blue</div>
+                                                </div>
+                                                <div style={{
+                                                    background: isConvenient ? `${C_CRYPTO.green}15` : `${C_CRYPTO.red}15`,
+                                                    color: isConvenient ? C_CRYPTO.green : C_CRYPTO.red,
+                                                    border: `1px solid ${isConvenient ? C_CRYPTO.green : C_CRYPTO.red}33`,
+                                                    padding: "8px 16px", borderRadius: 12, fontSize: 10, fontWeight: 900, textTransform: "uppercase", letterSpacing: "1px"
+                                                }}>
+                                                    {isConvenient ? "✅ CONVENIENTE" : "⚠️ CARO"}
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                             {/* Tip */}
                             <div style={{ background: C_CRYPTO.card, border: `1px solid ${C_CRYPTO.border}`, borderRadius: "16px", padding: "16px 20px" }}>
